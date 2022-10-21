@@ -1,4 +1,4 @@
-#include "library.h"
+#include "s4pkg/library.h"
 
 #include <iostream>
 
