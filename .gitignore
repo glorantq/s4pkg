@@ -166,3 +166,8 @@ _deps
 *-prefix/
 
 # End of https://www.toptal.com/developers/gitignore/api/cmake,c++,clion
+
+cmake-build-release/**
+cmakge-build-release/
+cmake-build-debug/
+cmake-build-debug/**
