@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.21)
 project(s4pkg
         VERSION 0.0.1
         DESCRIPTION "A C++ library for working with Sims 4 package files"
