@@ -76,8 +76,15 @@ class S4PKG_EXPORT PackageFlags : public Object {
     const std::string toString() const override;
 };
 
+/**
+ * @brief Type of a resource
+ * @see https://forums.thesims.com/en_US/discussion/858947/maxis-info-index
+ */
 enum ResourceType { UNKNOWN = 0, CAS_PART_RESOURCE_v42 = 0x034AEECB };
 
+/**
+ * @brief CompressionType of a resource
+ */
 enum CompressionType {
     UNCOMPRESSED = 0x0000,
     STREAMABLE = 0xfffe,
@@ -128,6 +135,9 @@ class S4PKG_EXPORT IndexEntry : public Object {
     const std::string toString() const override;
 };
 
+/**
+ * @brief The main interface for package files
+ */
 class S4PKG_EXPORT IPackage : public Object {
    public:
     virtual bool isValid() const = 0;

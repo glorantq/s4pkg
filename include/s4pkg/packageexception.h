@@ -4,6 +4,10 @@
 #include <string>
 
 namespace s4pkg {
+
+/**
+ * @brief If an exception is thrown in this library, this is the one.
+ */
 class PackageException : public std::exception {
    private:
     std::string m_message;
@@ -13,4 +17,5 @@ class PackageException : public std::exception {
         : m_message(std::move(message)){};
     const char* what() const noexcept override { return m_message.c_str(); }
 };
+
 }  // namespace s4pkg

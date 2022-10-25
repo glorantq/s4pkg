@@ -7,6 +7,10 @@
 
 namespace s4pkg::internal {
 
+/**
+ * @brief A package implementation which reads in and stores the whole package
+ * in memory after being constructed.
+ */
 class InMemoryPackage : public s4pkg::IPackage {
    private:
     package_header_t m_packageHeader;
