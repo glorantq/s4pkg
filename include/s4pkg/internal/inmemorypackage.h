@@ -3,6 +3,8 @@
 #include <s4pkg/internal/types.h>
 #include <s4pkg/package/ipackage.h>
 
+#include <s4pkg/packageexception.h>
+
 namespace s4pkg::internal {
 
 class InMemoryPackage : public s4pkg::IPackage {
@@ -33,6 +35,11 @@ class InMemoryPackage : public s4pkg::IPackage {
 
     uint32_t m_unused5[6];
 
+    bool m_valid = false;
+
+   public:
+    InMemoryPackage(std::istream&);
+
     // s4pkg::IPackage interface
    public:
     bool isValid() const override;
@@ -41,6 +48,7 @@ class InMemoryPackage : public s4pkg::IPackage {
     const PackageVersion getUserVersion() const override;
     const PackageTime getCreationTime() const override;
     const PackageTime getModifiedTime() const override;
+    const PackageHeader getPackageHeader() const override;
 
     // s4pkg::Object interface
    public:
