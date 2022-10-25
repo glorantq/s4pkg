@@ -12,8 +12,7 @@ include(GenerateExportHeader)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vendor/fmt)
 
 file(GLOB_RECURSE LIB_HEADER_FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/*/*.h)
-add_library(s4pkg SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/library.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/package/impl/inmemorypackage.cpp
+add_library(s4pkg SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/package/impl/inmemorypackage.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/package/ipackage.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/package/packages.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/streams.cpp
