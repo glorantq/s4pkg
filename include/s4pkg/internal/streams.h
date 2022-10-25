@@ -16,4 +16,6 @@ void readUint32Array(std::istream&, uint32_t* buffer, int size);
 void readPackageTime(std::istream&, package_time_t& value);
 void readPackageVersion(std::istream&, package_version_t& value);
 
+void readPackageHeader(std::istream&, package_header_t& value);
+
 }  // namespace s4pkg::internal::streams

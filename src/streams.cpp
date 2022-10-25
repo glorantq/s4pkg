@@ -53,4 +53,37 @@ void readPackageVersion(std::istream& stream, package_version_t& value) {
     readUint32(stream, value.m_minor);
 }
 
+void readPackageHeader(std::istream& stream, package_header_t& value) {
+    readBytes(stream, value.m_fileIdentifier, 4);
+
+    uint8_t expectedIdentifier[] = {'D', 'B', 'P', 'F'};
+
+    for (int i = 0; i < 4; i++) {
+        if (value.m_fileIdentifier[i] != expectedIdentifier[i]) {
+            throw PackageException("Invalid file identifier!");
+        }
+    }
+
+    readPackageVersion(stream, value.m_fileVersion);
+    readPackageVersion(stream, value.m_userVersion);
+
+    readUint32(stream, value.m_unused1);
+
+    readPackageTime(stream, value.m_creationTime);
+    readPackageTime(stream, value.m_updatedTime);
+
+    readUint32(stream, value.m_unused2);
+
+    readUint32(stream, value.m_indexRecordEntryCount);
+    readUint32(stream, value.m_indexRecordPositionLow);
+    readUint32(stream, value.m_indexRecordSize);
+
+    readUint32Array(stream, value.m_unused3, 3);
+    readUint32(stream, value.m_unused4);
+
+    readUint64(stream, value.m_indexRecordPosition);
+
+    readUint32Array(stream, value.m_unused5, 6);
+}
+
 }  // namespace s4pkg::internal::streams

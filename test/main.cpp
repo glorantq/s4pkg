@@ -7,7 +7,9 @@
 
 #include <fstream>
 
-TEST_CASE("Test fundamental types", "[package]") {
+TEST_CASE("Test streams", "[io]") {}
+
+TEST_CASE("Test fundamental types", "[types]") {
     s4pkg::PackageVersion version = {1, 2};
     INFO("PackageVersion::toString(): " << version.toString());
     REQUIRE(version.m_majorVersion == 1);
@@ -18,6 +20,13 @@ TEST_CASE("Test fundamental types", "[package]") {
     REQUIRE(std::chrono::duration_cast<std::chrono::seconds>(
                 time.m_timePoint.time_since_epoch())
                 .count() == 1666719234LL);
+
+    s4pkg::PackageHeader header = {1, 2, 3, 4};
+    INFO("PackageHeader::toString(): " << header.toString());
+    REQUIRE(header.m_indexRecordEntryCount == 1);
+    REQUIRE(header.m_indexRecordPositionLow == 2);
+    REQUIRE(header.m_indexRecordSize == 3);
+    REQUIRE(header.m_indexRecordPosition == 4);
 }
 
 TEST_CASE("Test good in-memory package", "[package]") {
