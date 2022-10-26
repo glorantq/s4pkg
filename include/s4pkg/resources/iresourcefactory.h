@@ -20,39 +20,17 @@
 
 #pragma once
 
-#include <s4pkg/internal/export.h>
 #include <s4pkg/object.h>
-#include <s4pkg/package/types.h>
 #include <s4pkg/resources/iresource.h>
 
-#include <ostream>
 #include <vector>
 
 namespace s4pkg {
 
-/**
- * @brief The main interface for package files
- */
-class S4PKG_EXPORT IPackage : public Object {
+class IResourceFactory : public Object {
    public:
-    virtual bool isValid() const = 0;
-
-    // Getters
-
-    virtual const PackageVersion getFileVersion() const = 0;
-    virtual const PackageVersion getUserVersion() const = 0;
-
-    virtual const PackageTime getCreationTime() const = 0;
-    virtual const PackageTime getModifiedTime() const = 0;
-
-    virtual const PackageHeader getPackageHeader() const = 0;
-    virtual const PackageFlags getPackageFlags() const = 0;
-
-    virtual const std::vector<IndexEntry> getPackageIndex() const = 0;
-    virtual const std::vector<std::shared_ptr<IResource>> getResources()
-        const = 0;
-
-    virtual void write(std::ostream& stream) const = 0;
+    virtual std::shared_ptr<IResource> create(
+        const std::vector<uint8_t>&) const = 0;
 };
 
-};  // namespace s4pkg
+}  // namespace s4pkg

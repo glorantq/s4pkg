@@ -20,13 +20,15 @@
 
 #include <s4pkg/internal/inmemorypackage.h>
 
+#include <s4pkg/internal/globals.h>
 #include <s4pkg/internal/streams.h>
 #include <s4pkg/packageexception.h>
+#include <s4pkg/resources/iresourcefactory.h>
 
-#include <iostream>
 #include <istream>
 
 #include <fmt/core.h>
+#include <fmt/printf.h>
 
 namespace s4pkg {
 
@@ -65,6 +67,32 @@ internal::InMemoryPackage::InMemoryPackage(std::istream& stream) {
                        this->m_index);
 
     streams::readRecords(stream, this->m_index, this->m_records);
+
+    for (const auto& record : this->m_records.m_records) {
+        index_entry_t associatedEntry = this->m_index.m_entries[record.m_index];
+
+        std::shared_ptr<IResourceFactory> resourceFactory =
+            internal::globals::getResourceFactoryFor(
+                (ResourceType)associatedEntry.m_type);
+
+        if (resourceFactory != nullptr) {
+            std::shared_ptr<IResource> parsedResource =
+                resourceFactory->create(record.m_data);
+
+            if (parsedResource != nullptr) {
+                this->m_resources.push_back(parsedResource);
+            } else {
+                throw PackageException(fmt::format(
+                    "Resource of type {:#x} returned no parsed implementation.",
+                    associatedEntry.m_type));
+            }
+        } else {
+            throw PackageException(
+                fmt::format("Unknown resource {:#x}, and for some reason no "
+                            "fallback factory was returned.",
+                            associatedEntry.m_type));
+        }
+    }
 
     this->m_valid = true;  // There should be better validation here, but for
                            // the time being, this is fine™
@@ -125,6 +153,13 @@ const std::vector<IndexEntry> internal::InMemoryPackage::getPackageIndex()
     }
 
     return entries;
+}
+
+void internal::InMemoryPackage::write(std::ostream& stream) const {}
+
+const std::vector<std::shared_ptr<IResource>>
+internal::InMemoryPackage::getResources() const {
+    return this->m_resources;
 }
 
 const std::string internal::InMemoryPackage::toString() const {

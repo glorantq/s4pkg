@@ -88,7 +88,14 @@ TEST_CASE("Test good in-memory package", "[package]") {
         std::cout << "Entry: " << entry.toString() << std::endl;
     }
 
+    for (const auto& resource : package.m_package->getResources()) {
+        std::cout << "Resource: " << resource->toString() << std::endl;
+    }
+
     std::cout << package.m_package->toString() << std::endl;
+
+    std::ofstream outputStream("./output.package", std::ios_base::binary);
+    outputStream.close();
 }
 
 TEST_CASE("Test bad in-memory package", "[package]") {

@@ -18,6 +18,9 @@ add_library(s4pkg SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/package/impl/inmemorypa
     ${CMAKE_CURRENT_SOURCE_DIR}/src/package/packages.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/package/types.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/streams.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/globals.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/fallbackresourcefactory.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/fallbackresource.cpp
     ${LIB_HEADER_FILES})
 
 target_link_libraries(s4pkg PRIVATE fmt::fmt miniz)

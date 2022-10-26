@@ -45,6 +45,8 @@ class InMemoryPackage : public s4pkg::IPackage {
 
     bool m_valid = false;
 
+    std::vector<std::shared_ptr<IResource>> m_resources;
+
    public:
     InMemoryPackage(std::istream&);
 
@@ -59,6 +61,8 @@ class InMemoryPackage : public s4pkg::IPackage {
     const PackageHeader getPackageHeader() const override;
     const PackageFlags getPackageFlags() const override;
     const std::vector<IndexEntry> getPackageIndex() const override;
+    const std::vector<std::shared_ptr<IResource>> getResources() const override;
+    void write(std::ostream& stream) const override;
 
     // s4pkg::Object interface
    public:
