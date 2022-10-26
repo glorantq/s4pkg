@@ -131,7 +131,7 @@ void readPackageFlags(std::istream& stream, flags_t& value) {
 
     readUint32(stream, bitField);
 
-    uint32_t constantType = bitField & 01;
+    uint32_t constantType = bitField & 1;
     uint32_t constantGroup = bitField >> 1 & 1;
     uint32_t constantInstanceEx = bitField >> 2 & 1;
     uint32_t reserved = bitField >> 29;

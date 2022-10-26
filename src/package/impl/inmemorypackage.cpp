@@ -64,7 +64,8 @@ internal::InMemoryPackage::InMemoryPackage(std::istream& stream) {
 
     streams::readRecords(stream, this->m_index, this->m_records);
 
-    this->m_valid = true;
+    this->m_valid = true;  // There should be better validation here, but for
+                           // the time being, this is fine™
 }
 
 bool internal::InMemoryPackage::isValid() const {
