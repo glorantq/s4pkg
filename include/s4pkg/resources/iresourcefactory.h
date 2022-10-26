@@ -31,7 +31,8 @@ namespace s4pkg {
 class IResourceFactory : public Object {
    public:
     virtual std::shared_ptr<IResource> create(
-        uint32_t type, /**< This is purely for fallback */
+        uint32_t type, /**< This is purely for fallback, to not break resources
+                          not understood (or cared about) this tool */
         uint32_t instanceEx,
         uint32_t instance,
         uint32_t group,

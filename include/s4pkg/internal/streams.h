@@ -145,6 +145,10 @@ void readRecord(std::istream&,
  */
 void readRecords(std::istream&, const index_t&, records_t& value);
 
+// These methods behave the same as their "read" counterparts unless documented
+// otherwise, throwing a PackageException when encountering an error with the
+// stream
+
 void writeBytes(std::ostream&, const uint8_t* buffer, int size);
 void writeUint8(std::ostream&, const uint8_t& value);
 void writeUint32(std::ostream&, const uint32_t& value);
@@ -158,10 +162,23 @@ void writePackageHeader(std::ostream&, const package_header_t& value);
 void writePackageFlags(std::ostream&, const flags_t& value);
 void writeIndexEntry(std::ostream&, const flags_t&, const index_entry_t& value);
 void writeIndex(std::ostream&, const flags_t&, const index_t& value);
+
+/**
+ * @brief Writes a record to the stream. This method modifies the index to set
+ * the position, size, and decompressedSize
+ * @param index: a modifiable index
+ * @param value: the record to write
+ */
 void writeRecord(std::ostream&,
                  index_t&,
                  uint32_t index,
                  const raw_record_t& value);
+
+/**
+ * @brief Writes a record table to the stream. This method modifies the index to
+ * set the position, size and decompressedSize
+ * @param value: the record table
+ */
 void writeRecords(std::ostream&, index_t&, const records_t& value);
 
 }  // namespace s4pkg::internal::streams
