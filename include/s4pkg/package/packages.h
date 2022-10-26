@@ -32,8 +32,8 @@ namespace s4pkg {
  * loading failed.
  */
 struct S4PKG_EXPORT PackageLoadResult {
-    std::shared_ptr<IPackage> m_package;
-    std::string m_errorMessage;
+    const std::shared_ptr<IPackage> m_package;
+    const std::string m_errorMessage;
 };
 
 /**

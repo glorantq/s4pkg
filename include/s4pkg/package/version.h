@@ -27,8 +27,8 @@ namespace s4pkg {
 
 class S4PKG_EXPORT PackageVersion : public Object {
    public:
-    const unsigned long m_majorVersion;
-    const unsigned long m_minorVersion;
+    unsigned long m_majorVersion;
+    unsigned long m_minorVersion;
 
     PackageVersion(unsigned int majorVersion, unsigned int minorVersion)
         : m_majorVersion(majorVersion), m_minorVersion(minorVersion){};

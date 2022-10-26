@@ -66,6 +66,14 @@ typedef struct flags_t {
     uint32_t m_reserved : 29;
 } flags_t;
 
+typedef enum compression_type_t {
+    UNCOMPRESSED = 0x0000,
+    STREAMABLE = 0xfffe,
+    INTERNAL = 0xffff,
+    DELETED = 0xffe0,
+    ZLIB = 0x5a42
+} compression_type_t;
+
 typedef struct index_entry_t {
     uint32_t m_type;
     uint32_t m_group;
@@ -78,7 +86,7 @@ typedef struct index_entry_t {
     uint32_t m_extendedCompressionType : 1;
     uint32_t m_sizeDecompressed;
 
-    uint16_t m_compressionType;
+    compression_type_t m_compressionType;
     uint16_t m_committed; /**< Typically set to 1 */
 } index_entry_t;
 
@@ -89,7 +97,7 @@ typedef struct index_t {
 typedef struct raw_record_t {
     uint32_t m_index;
     uint32_t m_size;
-    std::shared_ptr<uint8_t> m_data;
+    std::vector<uint8_t> m_data;
 } raw_record_t;
 
 typedef struct records_t {

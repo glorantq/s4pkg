@@ -26,7 +26,11 @@ namespace s4pkg {
  * @brief Type of a resource
  * @see https://forums.thesims.com/en_US/discussion/858947/maxis-info-index
  */
-enum ResourceType { UNKNOWN = 0, CAS_PART_RESOURCE_v42 = 0x034AEECB };
+enum ResourceType {
+    UNKNOWN = 0,
+    CAS_PART_RESOURCE_v42 = 0x034AEECB,
+    STRING_TABLE_v5 = 0x220557da
+};
 
 /**
  * @brief CompressionType of a resource

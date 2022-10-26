@@ -27,9 +27,9 @@ namespace s4pkg {
 
 class S4PKG_EXPORT PackageFlags : public Object {
    public:
-    const bool m_isConstantType;
-    const bool m_isConstantGroup;
-    const bool m_isConstantInstance;
+    bool m_isConstantType;
+    bool m_isConstantGroup;
+    bool m_isConstantInstance;
 
     PackageFlags(bool isConstantType,
                  bool isConstantGroup,

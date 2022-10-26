@@ -33,15 +33,15 @@ namespace s4pkg::internal {
  */
 class InMemoryPackage : public s4pkg::IPackage {
    private:
-    package_header_t m_packageHeader;
-    flags_t m_flags;
+    package_header_t m_packageHeader{};
+    flags_t m_flags{};
 
     uint32_t m_constantTypeId;
     uint32_t m_constantGroupId;
     uint32_t m_constantInstanceIdEx;
 
-    index_t m_index;
-    records_t m_records;
+    index_t m_index{};
+    records_t m_records{};
 
     bool m_valid = false;
 

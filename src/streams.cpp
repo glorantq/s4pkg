@@ -21,8 +21,11 @@
 #include <s4pkg/internal/streams.h>
 
 #include <s4pkg/packageexception.h>
-#include <bitset>
-#include <iostream>
+
+#include <fmt/core.h>
+#include <fmt/printf.h>
+
+#include <miniz.h>
 
 namespace s4pkg::internal::streams {
 
@@ -31,7 +34,8 @@ void readBytes(std::istream& stream, uint8_t* buffer, int size) {
         stream.read((char*)(buffer + i), 1);
 
         if (!stream.good()) {
-            throw PackageException("Unexpected end of stream!");
+            throw PackageException(fmt::format(
+                "Unexpected end of stream! Tried reading {} bytes.", size));
         }
     }
 }
@@ -41,7 +45,8 @@ void readUint8(std::istream& stream, uint8_t& value) {
     stream.read((char*)&temp, 1);
 
     if (!stream.good()) {
-        throw PackageException("Unexpected end of stream!");
+        throw PackageException(
+            "Unexpected end of stream! Tried reading 1 uint8_t.");
     }
 
     value = temp;
@@ -169,7 +174,10 @@ void readIndexEntry(std::istream& stream,
     readUint32(stream, value.m_sizeDecompressed);
 
     if (value.m_extendedCompressionType > 0) {
-        readUint16(stream, value.m_compressionType);
+        uint16_t compressionType;
+        readUint16(stream, compressionType);
+        value.m_compressionType = (compression_type_t)compressionType;
+
         readUint16(stream, value.m_committed);
     }
 }
@@ -179,7 +187,7 @@ void readIndex(std::istream& stream,
                uint32_t indexRecordCount,
                index_t& value) {
     for (int i = 0; i < indexRecordCount; i++) {
-        index_entry_t indexEntry = {};
+        index_entry_t indexEntry{};
 
         readIndexEntry(stream, flags, indexEntry);
         value.m_entries.push_back(indexEntry);
@@ -205,22 +213,88 @@ void readRecord(std::istream& stream,
 
     stream.seekg(indexEntry.m_position);
     if (indexEntry.m_size > 0) {
-        std::shared_ptr<uint8_t> buffer = std::shared_ptr<uint8_t>(
-            new uint8_t[indexEntry.m_size], std::default_delete<uint8_t[]>());
+        std::vector<uint8_t> compressedBuffer(indexEntry.m_size);
 
         uint8_t byte;
         for (int i = 0; i < indexEntry.m_size; i++) {
             readUint8(stream, byte);
-            buffer.get()[i] = byte;
+            compressedBuffer[i] = byte;
         }
 
-        value.m_data = buffer;
+        if (indexEntry.m_compressionType == compression_type_t::DELETED) {
+            throw PackageException("Unimplemented compression type: DELETED");
+        } else if (indexEntry.m_compressionType ==
+                   compression_type_t::INTERNAL) {
+            throw PackageException("Unimplemented compression type: INTERNAL");
+        } else if (indexEntry.m_compressionType ==
+                   compression_type_t::STREAMABLE) {
+            throw PackageException(
+                "Unimplemented compression type: STREAMABLE");
+        } else if (indexEntry.m_compressionType == compression_type_t::ZLIB) {
+            mz_stream zInflateStream;
+            zInflateStream.zalloc = nullptr;
+            zInflateStream.zfree = nullptr;
+            zInflateStream.opaque = nullptr;
+
+            zInflateStream.avail_in = (unsigned int)indexEntry.m_size;
+            zInflateStream.next_in = compressedBuffer.data();
+
+            std::vector<uint8_t> buffer(indexEntry.m_sizeDecompressed);
+
+            zInflateStream.avail_out =
+                (unsigned int)indexEntry.m_sizeDecompressed;
+            zInflateStream.next_out = buffer.data();
+
+            mz_inflateInit(&zInflateStream);
+
+            int inflateResult = mz_inflate(&zInflateStream, MZ_NO_FLUSH);
+            if (inflateResult != MZ_OK && inflateResult != MZ_STREAM_END) {
+                std::string errorName;
+                switch (inflateResult) {
+                    case MZ_OK:
+                        errorName = "MZ_OK";
+                        break;
+
+                    case MZ_STREAM_END:
+                        errorName = "MZ_STREAM_END";
+                        break;
+
+                    case MZ_STREAM_ERROR:
+                        errorName = "MZ_STREAM_ERROR";
+                        break;
+
+                    case MZ_DATA_ERROR:
+                        errorName = "MZ_DATA_ERROR";
+                        break;
+
+                    case MZ_PARAM_ERROR:
+                        errorName = "MZ_PARAM_ERROR";
+                        break;
+
+                    case MZ_BUF_ERROR:
+                        errorName = "MZ_BUF_ERROR";
+                        break;
+
+                    default:
+                        errorName = "?";
+                }
+
+                throw PackageException(fmt::format(
+                    "Failed to decompress resource {}, result is {}",
+                    indexEntry.m_instance, errorName));
+            }
+            mz_inflateEnd(&zInflateStream);
+
+            value.m_data = buffer;
+        } else {
+            value.m_data = compressedBuffer;
+        }
     }
 }
 
 void readRecords(std::istream& stream, const index_t& index, records_t& value) {
     for (uint32_t i = 0; i < index.m_entries.size(); i++) {
-        raw_record_t record = {};
+        raw_record_t record{};
         readRecord(stream, index, i, record);
 
         value.m_records.push_back(record);

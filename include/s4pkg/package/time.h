@@ -29,7 +29,7 @@ namespace s4pkg {
 
 class S4PKG_EXPORT PackageTime : public Object {
    public:
-    const std::chrono::time_point<std::chrono::system_clock> m_timePoint;
+    std::chrono::time_point<std::chrono::system_clock> m_timePoint;
 
     PackageTime(long long unixTime)
         : m_timePoint(std::chrono::time_point<std::chrono::system_clock>() +

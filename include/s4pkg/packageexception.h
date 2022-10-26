@@ -20,6 +20,8 @@
 
 #pragma once
 
+#include <s4pkg/internal/export.h>
+
 #include <exception>
 #include <string>
 
@@ -28,7 +30,7 @@ namespace s4pkg {
 /**
  * @brief If an exception is thrown in this library, this is the one.
  */
-class PackageException : public std::exception {
+class S4PKG_EXPORT PackageException : public std::exception {
    private:
     std::string m_message;
 

@@ -55,6 +55,10 @@ const std::string IndexEntry::toString() const {
             resourceTypeName = "CAS Part Resource v42";
             break;
 
+        case ResourceType::STRING_TABLE_v5:
+            resourceTypeName = "String Table v5";
+            break;
+
         case ResourceType::UNKNOWN:
         default:
             resourceTypeName = "UNKNOWN";

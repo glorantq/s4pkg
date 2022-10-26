@@ -28,19 +28,19 @@ namespace s4pkg {
 
 class S4PKG_EXPORT IndexEntry : public Object {
    public:
-    const ResourceType m_type;
-    const unsigned long m_group;
-    const unsigned long m_instanceEx;
+    ResourceType m_type;
+    unsigned long m_group;
+    unsigned long m_instanceEx;
 
-    const unsigned long m_instance;
-    const unsigned long m_position;
-    const unsigned long m_size;
+    unsigned long m_instance;
+    unsigned long m_position;
+    unsigned long m_size;
 
-    const bool m_isExtendedCompressionType;
-    const unsigned long m_sizeDecompressed;
+    bool m_isExtendedCompressionType;
+    unsigned long m_sizeDecompressed;
 
-    const CompressionType m_compressionType;
-    const unsigned int m_committed;
+    CompressionType m_compressionType;
+    unsigned int m_committed;
 
     IndexEntry(ResourceType resourceType,
                unsigned long group,

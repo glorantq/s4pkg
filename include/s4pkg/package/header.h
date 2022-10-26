@@ -27,10 +27,10 @@ namespace s4pkg {
 
 class S4PKG_EXPORT PackageHeader : public Object {
    public:
-    const unsigned long m_indexRecordEntryCount;
-    const unsigned long m_indexRecordPositionLow;
-    const unsigned long m_indexRecordSize;
-    const unsigned long long m_indexRecordPosition;
+    unsigned long m_indexRecordEntryCount;
+    unsigned long m_indexRecordPositionLow;
+    unsigned long m_indexRecordSize;
+    unsigned long long m_indexRecordPosition;
 
     PackageHeader(unsigned long indexRecordEntryCount,
                   unsigned long indexRecordPositionLow,
