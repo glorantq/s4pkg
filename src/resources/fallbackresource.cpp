@@ -24,12 +24,8 @@
 
 namespace s4pkg::resources {
 
-ResourceType FallbackResource::getResourceType() const {
-    return ResourceType::UNKNOWN;
-}
-
-void FallbackResource::write(std::ostream& stream) const {
-    stream.write((const char*)this->m_data.data(), this->m_data.size());
+std::vector<uint8_t> FallbackResource::write() const {
+    return this->m_data;
 }
 
 const std::string FallbackResource::toString() const {

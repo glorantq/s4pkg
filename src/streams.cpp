@@ -283,6 +283,7 @@ void readRecord(std::istream& stream,
                     "Failed to decompress resource {}, result is {}",
                     indexEntry.m_instance, errorName));
             }
+
             mz_inflateEnd(&zInflateStream);
 
             value.m_data = buffer;
@@ -298,6 +299,251 @@ void readRecords(std::istream& stream, const index_t& index, records_t& value) {
         readRecord(stream, index, i, record);
 
         value.m_records.push_back(record);
+    }
+}
+
+void writeBytes(std::ostream& stream, const uint8_t* buffer, int size) {
+    if (!stream.good()) {
+        throw PackageException(fmt::format(
+            "Unexpected stream failure! Tried writing {} bytes.", size));
+    }
+
+    if (buffer == nullptr) {
+        throw PackageException("Buffer to be written is nullptr!");
+    }
+
+    stream.write((const char*)buffer, size);
+}
+
+void writeUint8(std::ostream& stream, const uint8_t& value) {
+    if (!stream.good()) {
+        throw PackageException(
+            "Unexpected stream failure! Tried writing 1 uint8_t.");
+    }
+
+    stream.write((const char*)&value, 1);
+}
+
+void writeUint32(std::ostream& stream, const uint32_t& value) {
+    uint8_t buffer[4];
+
+    buffer[3] = (value >> 24) & 0xFF;
+    buffer[2] = (value >> 16) & 0xFF;
+    buffer[1] = (value >> 8) & 0xFF;
+    buffer[0] = value & 0xFF;
+
+    writeBytes(stream, buffer, 4);
+}
+
+void writeInt32(std::ostream& stream, const int32_t& value) {
+    uint32_t temp = (uint32_t)value;
+    writeUint32(stream, temp);
+}
+
+void writeUint64(std::ostream& stream, const uint64_t& value) {
+    uint8_t buffer[8];
+
+    buffer[7] = (value >> 56) & 0xFF;
+    buffer[6] = (value >> 48) & 0xFF;
+    buffer[5] = (value >> 40) & 0xFF;
+    buffer[4] = (value >> 32) & 0xFF;
+    buffer[3] = (value >> 24) & 0xFF;
+    buffer[2] = (value >> 16) & 0xFF;
+    buffer[1] = (value >> 8) & 0xFF;
+    buffer[0] = value & 0xFF;
+
+    writeBytes(stream, buffer, 8);
+}
+
+void writeUint16(std::ostream& stream, const uint16_t& value) {
+    uint8_t buffer[2];
+
+    buffer[1] = (value >> 8) & 0xFF;
+    buffer[0] = value & 0xFF;
+
+    writeBytes(stream, buffer, 2);
+}
+
+void writeUint32Array(std::ostream& stream, const uint32_t* array, int size) {
+    for (int i = 0; i < size; i++) {
+        writeUint32(stream, array[i]);
+    }
+}
+
+void writePackageTime(std::ostream& stream, const package_time_t& value) {
+    writeInt32(stream, value);
+}
+
+void writePackageVersion(std::ostream& stream, const package_version_t& value) {
+    writeUint32(stream, value.m_major);
+    writeUint32(stream, value.m_minor);
+}
+
+void writePackageHeader(std::ostream& stream, const package_header_t& value) {
+    uint8_t expectedIdentifier[] = {'D', 'B', 'P', 'F'};
+    writeBytes(stream, expectedIdentifier, 4);
+
+    writePackageVersion(stream, value.m_fileVersion);
+    writePackageVersion(stream, value.m_userVersion);
+
+    writeUint32(stream, value.m_unused1);
+
+    writePackageTime(stream, value.m_creationTime);
+    writePackageTime(stream, value.m_updatedTime);
+
+    writeUint32(stream, value.m_unused2);
+
+    writeUint32(stream, value.m_indexRecordEntryCount);
+    writeUint32(stream, value.m_indexRecordPositionLow);
+    writeUint32(stream, value.m_indexRecordSize);
+
+    writeUint32Array(stream, value.m_unused3, 3);
+    writeUint32(stream, value.m_unused4);
+
+    writeUint64(stream, value.m_indexRecordPosition);
+
+    writeUint32Array(stream, value.m_unused5, 6);
+}
+
+void writePackageFlags(std::ostream& stream, const flags_t& value) {
+    uint32_t bitField = 0;
+
+    bitField |= value.m_constantType & 1;
+    bitField |= (value.m_constantGroup & 1) << 1;
+    bitField |= (value.m_constantInstanceEx & 1) << 2;
+    bitField |= (value.m_reserved << 3) >> 3;
+
+    writeUint32(stream, bitField);
+}
+
+void writeIndexEntry(std::ostream& stream,
+                     const flags_t& flags,
+                     const index_entry_t& value) {
+    if (flags.m_constantType == 0) {
+        writeUint32(stream, value.m_type);
+    }
+
+    if (flags.m_constantGroup == 0) {
+        writeUint32(stream, value.m_group);
+    }
+
+    if (flags.m_constantInstanceEx == 0) {
+        writeUint32(stream, value.m_instanceEx);
+    }
+
+    writeUint32(stream, value.m_instance);
+    writeUint32(stream, value.m_position);
+
+    uint32_t sizeCompressionBitField = 0;
+    sizeCompressionBitField |= (value.m_extendedCompressionType & 1) << 31;
+    sizeCompressionBitField |= (value.m_size << 1) >> 1;
+
+    writeUint32(stream, sizeCompressionBitField);
+
+    writeUint32(stream, value.m_sizeDecompressed);
+    if (value.m_extendedCompressionType > 0) {
+        uint16_t compressionType = value.m_compressionType;
+        writeUint16(stream, compressionType);
+        writeUint16(stream, value.m_committed);
+    }
+}
+
+void writeIndex(std::ostream& stream,
+                const flags_t& flags,
+                const index_t& value) {
+    for (int i = 0; i < value.m_entries.size(); i++) {
+        writeIndexEntry(stream, flags, value.m_entries[i]);
+    }
+}
+
+void writeRecord(std::ostream& stream,
+                 index_t& packageIndex,
+                 uint32_t index,
+                 const raw_record_t& value) {
+    index_entry_t& associatedEntry = packageIndex.m_entries[value.m_index];
+
+    associatedEntry.m_position = stream.tellp();
+
+    std::vector<uint8_t> buffer(value.m_data.size());
+    uint32_t actualSize = 0;
+
+    if (value.m_data.size() > 0) {
+        if (associatedEntry.m_compressionType == compression_type_t::DELETED) {
+            throw PackageException("Unimplemented compression type: DELETED");
+        } else if (associatedEntry.m_compressionType ==
+                   compression_type_t::INTERNAL) {
+            throw PackageException("Unimplemented compression type: INTERNAL");
+        } else if (associatedEntry.m_compressionType ==
+                   compression_type_t::STREAMABLE) {
+            throw PackageException(
+                "Unimplemented compression type: STREAMABLE");
+        } else if (associatedEntry.m_compressionType ==
+                   compression_type_t::ZLIB) {
+            mz_stream zDeflateStream;
+
+            zDeflateStream.zalloc = nullptr;
+            zDeflateStream.zfree = nullptr;
+            zDeflateStream.opaque = nullptr;
+
+            zDeflateStream.avail_in = (unsigned int)value.m_data.size();
+            zDeflateStream.next_in = value.m_data.data();
+
+            zDeflateStream.avail_out = buffer.size();
+            zDeflateStream.next_out = buffer.data();
+
+            mz_deflateInit(&zDeflateStream, MZ_DEFAULT_COMPRESSION);
+
+            int deflateResult = mz_deflate(&zDeflateStream, MZ_FINISH);
+            if (deflateResult != MZ_OK && deflateResult != MZ_STREAM_END) {
+                std::string errorName;
+                switch (deflateResult) {
+                    case MZ_OK:
+                        errorName = "MZ_OK";
+                        break;
+                    case MZ_STREAM_END:
+                        errorName = "MZ_STREAM_END";
+                        break;
+                    case MZ_STREAM_ERROR:
+                        errorName = "MZ_STREAM_ERROR";
+                        break;
+                    case MZ_DATA_ERROR:
+                        errorName = "MZ_DATA_ERROR";
+                        break;
+                    case MZ_PARAM_ERROR:
+                        errorName = "MZ_PARAM_ERROR";
+                        break;
+                    case MZ_BUF_ERROR:
+                        errorName = "MZ_BUF_ERROR";
+                        break;
+                    default:
+                        errorName = "?";
+                }
+
+                throw PackageException(
+                    fmt::format("Failed to compress resource {}, result is {}",
+                                associatedEntry.m_instance, errorName));
+            }
+
+            mz_deflateEnd(&zDeflateStream);
+
+            actualSize = zDeflateStream.total_out;
+        } else {
+            buffer = value.m_data;
+            actualSize = value.m_data.size();
+        }
+    }
+
+    writeBytes(stream, buffer.data(), actualSize);
+
+    associatedEntry.m_size = actualSize;
+    associatedEntry.m_sizeDecompressed = buffer.size();
+}
+
+void writeRecords(std::ostream& stream,
+                  index_t& index,
+                  const records_t& value) {
+    for (uint32_t i = 0; i < index.m_entries.size(); i++) {
+        writeRecord(stream, index, i, value.m_records[i]);
     }
 }
 

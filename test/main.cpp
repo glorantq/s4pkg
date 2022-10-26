@@ -50,15 +50,11 @@ TEST_CASE("Test good in-memory package", "[package]") {
               << std::endl;
 
     s4pkg::PackageTime createdTime = package.m_package->getCreationTime();
-    REQUIRE(std::chrono::duration_cast<std::chrono::seconds>(
-                createdTime.m_timePoint.time_since_epoch())
-                .count() == 0LL);
+    REQUIRE(createdTime.toTimestamp() == 0LL);
     std::cout << "Created date: " << createdTime.toString() << std::endl;
 
     s4pkg::PackageTime updatedTime = package.m_package->getModifiedTime();
-    REQUIRE(std::chrono::duration_cast<std::chrono::seconds>(
-                updatedTime.m_timePoint.time_since_epoch())
-                .count() == 0LL);
+    REQUIRE(updatedTime.toTimestamp() == 0LL);
     std::cout << "Updated date: " << updatedTime.toString() << std::endl;
 
     s4pkg::PackageHeader header = package.m_package->getPackageHeader();
@@ -95,6 +91,7 @@ TEST_CASE("Test good in-memory package", "[package]") {
     std::cout << package.m_package->toString() << std::endl;
 
     std::ofstream outputStream("./output.package", std::ios_base::binary);
+    package.m_package->write(outputStream);
     outputStream.close();
 }
 

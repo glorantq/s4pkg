@@ -62,7 +62,18 @@ class InMemoryPackage : public s4pkg::IPackage {
     const PackageFlags getPackageFlags() const override;
     const std::vector<IndexEntry> getPackageIndex() const override;
     const std::vector<std::shared_ptr<IResource>> getResources() const override;
-    void write(std::ostream& stream) const override;
+
+    const uint32_t getConstantGroup() const override {
+        return this->m_constantGroupId;
+    }
+
+    const uint32_t getConstantType() const override {
+        return this->m_constantTypeId;
+    }
+
+    const uint32_t getConstantInstanceEx() const override {
+        return this->m_constantInstanceIdEx;
+    }
 
     // s4pkg::Object interface
    public:

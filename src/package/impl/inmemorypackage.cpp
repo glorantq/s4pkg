@@ -76,8 +76,10 @@ internal::InMemoryPackage::InMemoryPackage(std::istream& stream) {
                 (ResourceType)associatedEntry.m_type);
 
         if (resourceFactory != nullptr) {
-            std::shared_ptr<IResource> parsedResource =
-                resourceFactory->create(record.m_data);
+            std::shared_ptr<IResource> parsedResource = resourceFactory->create(
+                associatedEntry.m_type, associatedEntry.m_instanceEx,
+                associatedEntry.m_instance, associatedEntry.m_group,
+                record.m_data);
 
             if (parsedResource != nullptr) {
                 this->m_resources.push_back(parsedResource);
@@ -154,8 +156,6 @@ const std::vector<IndexEntry> internal::InMemoryPackage::getPackageIndex()
 
     return entries;
 }
-
-void internal::InMemoryPackage::write(std::ostream& stream) const {}
 
 const std::vector<std::shared_ptr<IResource>>
 internal::InMemoryPackage::getResources() const {

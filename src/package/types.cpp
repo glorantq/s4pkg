@@ -33,6 +33,12 @@ const std::string PackageTime::toString() const {
     return fmt::format("{:%Y-%m-%d %H:%M:%S}", this->m_timePoint);
 }
 
+long PackageTime::toTimestamp() const {
+    return std::chrono::duration_cast<std::chrono::seconds>(
+               this->m_timePoint.time_since_epoch())
+        .count();
+}
+
 const std::string PackageHeader::toString() const {
     return fmt::format(
         "[ recordEntryCount={}, recordPositionLow={}, recordPosition={}, "

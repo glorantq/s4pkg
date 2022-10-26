@@ -23,14 +23,17 @@
 #include <s4pkg/object.h>
 #include <s4pkg/package/enums.h>
 
-#include <ostream>
+#include <vector>
 
 namespace s4pkg {
 
 class IResource : public Object {
    public:
+    virtual uint32_t getInstanceEx() const = 0;
+    virtual uint32_t getInstance() const = 0;
+    virtual uint32_t getGroup() const = 0;
     virtual ResourceType getResourceType() const = 0;
-    virtual void write(std::ostream&) const = 0;
+    virtual std::vector<uint8_t> write() const = 0;
 };
 
 }  // namespace s4pkg

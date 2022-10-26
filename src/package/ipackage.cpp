@@ -18,6 +18,137 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <s4pkg/internal/streams.h>
 #include <s4pkg/package/ipackage.h>
 
-namespace s4pkg {};  // namespace s4pkg
+#include <fmt/printf.h>
+
+namespace s4pkg {
+
+void IPackage::write(std::ostream& stream) const {
+    // Construct flags structure
+    PackageFlags flags = this->getPackageFlags();
+
+    flags_t packageFlags{
+        flags.m_isConstantType, flags.m_isConstantGroup,
+        flags.m_isConstantInstance,
+        0  // m_reserved
+    };
+
+    // Construct a new index for this package
+
+    index_t packageIndex{};
+
+    // Create an index entry for every resource
+
+    const std::vector<std::shared_ptr<IResource>> resources =
+        this->getResources();
+
+    for (int i = 0; i < resources.size(); i++) {
+        std::shared_ptr<IResource> resource = resources[i];
+
+        index_entry_t indexEntry{
+            (uint32_t)resource->getResourceType(),
+            resource->getGroup(),
+            resource->getInstanceEx(),
+            resource->getInstance(),
+            0,  // m_position (set by the write method)
+            0,  // m_size (set by the write method)
+            1,  // m_extendedCompressionType
+            0,  // m_sizeDecompressed (set by the write method)
+            compression_type_t::UNCOMPRESSED,
+            1  // m_committed
+        };
+
+        packageIndex.m_entries.push_back(indexEntry);
+    }
+
+    // Create a record table
+
+    records_t recordTable{};
+
+    // Create raw records for each resource
+
+    for (int i = 0; i < resources.size(); i++) {
+        std::shared_ptr<IResource> resource = resources[i];
+        std::vector<uint8_t> resourceData = resource->write();
+
+        raw_record_t record{(uint32_t)i, (uint32_t)resourceData.size(),
+                            resourceData};
+
+        recordTable.m_records.push_back(record);
+    }
+
+    // 0-th step: make room for writing the header later
+    stream.seekp(sizeof(package_header_t));
+
+    // First we write out the resource blobs, the method in streams takes in the
+    // index we have and updates the corresponding entries for size,
+    // decompressed size, and position
+
+    internal::streams::writeRecords(stream, packageIndex, recordTable);
+
+    // We now save the current position in the stream, to later reference the
+    // start of the index in the header
+
+    uint32_t indexPosition = (uint32_t)stream.tellp();
+
+    fmt::printf("index position: %u\n", indexPosition);
+
+    // Now we write out the package flags
+
+    internal::streams::writePackageFlags(stream, packageFlags);
+
+    // If we have a constant group, type, or instance(ex), write it here
+
+    if (flags.m_isConstantType) {
+        internal::streams::writeUint32(stream, this->getConstantType());
+    }
+
+    if (flags.m_isConstantGroup) {
+        internal::streams::writeUint32(stream, this->getConstantGroup());
+    }
+
+    if (flags.m_isConstantInstance) {
+        internal::streams::writeUint32(stream, this->getConstantInstanceEx());
+    }
+
+    // And the index
+
+    internal::streams::writeIndex(stream, packageFlags, packageIndex);
+
+    // Now we create a header for the file
+
+    package_version_t fileVersion{this->getFileVersion().m_majorVersion,
+                                  this->getFileVersion().m_minorVersion};
+
+    package_version_t userVersion{this->getUserVersion().m_majorVersion,
+                                  this->getUserVersion().m_minorVersion};
+
+    package_time_t createdTime = this->getCreationTime().toTimestamp();
+    package_time_t updatedTime = this->getModifiedTime().toTimestamp();
+
+    package_header_t packageHeader{
+        {'D', 'B', 'P', 'F'},  // file identifier
+        fileVersion,
+        userVersion,
+        0,  // m_unused1
+        createdTime,
+        updatedTime,
+        0,  // m_unused1
+        (uint32_t)packageIndex.m_entries.size(),
+        0,  // m_indexRecordPositionLow
+        sizeof(index_entry_t),
+        {0, 0, 0},  // m_unused3
+        3,          // m_unused4
+        indexPosition,
+        {0, 0, 0, 0, 0, 0}  // m_unused5
+    };
+
+    // And write the header at the start of the file
+
+    stream.seekp(0);
+    internal::streams::writePackageHeader(stream, packageHeader);
+}
+
+};  // namespace s4pkg

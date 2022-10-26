@@ -32,6 +32,10 @@ class FallbackResourceFactory : public IResourceFactory {
     // IResourceFactory interface
    public:
     std::shared_ptr<IResource> create(
+        uint32_t type,
+        uint32_t instanceEx,
+        uint32_t instance,
+        uint32_t group,
         const std::vector<uint8_t>&) const override;
 
     // Object interface

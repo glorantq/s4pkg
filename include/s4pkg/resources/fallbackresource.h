@@ -22,8 +22,6 @@
 
 #include <s4pkg/resources/iresource.h>
 
-#include <vector>
-
 namespace s4pkg::resources {
 
 /**
@@ -33,13 +31,33 @@ class FallbackResource : public IResource {
    private:
     std::vector<uint8_t> m_data{};
 
+    uint32_t m_type;
+    uint32_t m_instanceEx;
+    uint32_t m_instance;
+    uint32_t m_group;
+
    public:
-    FallbackResource(std::vector<uint8_t> data) : m_data(std::move(data)) {}
+    FallbackResource(uint32_t type,
+                     uint32_t instanceEx,
+                     uint32_t instance,
+                     uint32_t group,
+                     std::vector<uint8_t> data)
+        : m_type(type),
+          m_instanceEx(instanceEx),
+          m_instance(instance),
+          m_group(group),
+          m_data(std::move(data)) {}
 
     // IResource interface
    public:
-    ResourceType getResourceType() const override;
-    void write(std::ostream&) const override;
+    ResourceType getResourceType() const override {
+        return (ResourceType)this->m_type;
+    }
+    uint32_t getInstanceEx() const override { return this->m_instanceEx; }
+    uint32_t getInstance() const override { return this->m_instance; }
+    uint32_t getGroup() const override { return this->m_group; }
+
+    std::vector<uint8_t> write() const override;
 
     // Object interface
    public:

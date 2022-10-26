@@ -23,6 +23,7 @@
 #include <s4pkg/object.h>
 #include <s4pkg/resources/iresource.h>
 
+#include <memory>
 #include <vector>
 
 namespace s4pkg {
@@ -30,6 +31,10 @@ namespace s4pkg {
 class IResourceFactory : public Object {
    public:
     virtual std::shared_ptr<IResource> create(
+        uint32_t type, /**< This is purely for fallback */
+        uint32_t instanceEx,
+        uint32_t instance,
+        uint32_t group,
         const std::vector<uint8_t>&) const = 0;
 };
 

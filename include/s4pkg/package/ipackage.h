@@ -48,11 +48,15 @@ class S4PKG_EXPORT IPackage : public Object {
     virtual const PackageHeader getPackageHeader() const = 0;
     virtual const PackageFlags getPackageFlags() const = 0;
 
+    virtual const uint32_t getConstantGroup() const = 0;
+    virtual const uint32_t getConstantType() const = 0;
+    virtual const uint32_t getConstantInstanceEx() const = 0;
+
     virtual const std::vector<IndexEntry> getPackageIndex() const = 0;
     virtual const std::vector<std::shared_ptr<IResource>> getResources()
         const = 0;
 
-    virtual void write(std::ostream& stream) const = 0;
+    void write(std::ostream& stream) const;
 };
 
 };  // namespace s4pkg

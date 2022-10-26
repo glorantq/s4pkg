@@ -24,8 +24,13 @@
 namespace s4pkg::factories {
 
 std::shared_ptr<s4pkg::IResource> FallbackResourceFactory::create(
+    uint32_t type,
+    uint32_t instanceEx,
+    uint32_t instance,
+    uint32_t group,
     const std::vector<uint8_t>& data) const {
-    return std::make_shared<resources::FallbackResource>(data);
+    return std::make_shared<resources::FallbackResource>(type, instanceEx,
+                                                         instance, group, data);
 }
 
 const std::string FallbackResourceFactory::toString() const {

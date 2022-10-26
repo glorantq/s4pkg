@@ -23,6 +23,7 @@
 #include <s4pkg/internal/types.h>
 
 #include <istream>
+#include <ostream>
 
 namespace s4pkg::internal::streams {
 
@@ -143,5 +144,24 @@ void readRecord(std::istream&,
  * @throws PackageException, if there aren't enough bytes left in the stream
  */
 void readRecords(std::istream&, const index_t&, records_t& value);
+
+void writeBytes(std::ostream&, const uint8_t* buffer, int size);
+void writeUint8(std::ostream&, const uint8_t& value);
+void writeUint32(std::ostream&, const uint32_t& value);
+void writeInt32(std::ostream&, const int32_t& value);
+void writeUint64(std::ostream&, const uint64_t& value);
+void writeUint16(std::ostream&, const uint16_t& value);
+void writeUint32Array(std::ostream&, const uint32_t* array, int size);
+void writePackageTime(std::ostream&, const package_time_t& value);
+void writePackageVersion(std::ostream&, const package_version_t& value);
+void writePackageHeader(std::ostream&, const package_header_t& value);
+void writePackageFlags(std::ostream&, const flags_t& value);
+void writeIndexEntry(std::ostream&, const flags_t&, const index_entry_t& value);
+void writeIndex(std::ostream&, const flags_t&, const index_t& value);
+void writeRecord(std::ostream&,
+                 index_t&,
+                 uint32_t index,
+                 const raw_record_t& value);
+void writeRecords(std::ostream&, index_t&, const records_t& value);
 
 }  // namespace s4pkg::internal::streams

@@ -38,6 +38,8 @@ class S4PKG_EXPORT PackageTime : public Object {
     PackageTime(std::chrono::time_point<std::chrono::system_clock> timePoint)
         : m_timePoint(timePoint){};
 
+    long toTimestamp() const;
+
     // s4pkg::Object interface
    public:
     const std::string toString() const override;
