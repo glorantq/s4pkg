@@ -22,31 +22,20 @@
 
 #include <s4pkg/internal/export.h>
 #include <s4pkg/object.h>
-#include <s4pkg/package/types.h>
-
-#include <vector>
 
 namespace s4pkg {
 
-/**
- * @brief The main interface for package files
- */
-class S4PKG_EXPORT IPackage : public Object {
+class S4PKG_EXPORT PackageVersion : public Object {
    public:
-    virtual bool isValid() const = 0;
+    const unsigned long m_majorVersion;
+    const unsigned long m_minorVersion;
 
-    // Getters
+    PackageVersion(unsigned int majorVersion, unsigned int minorVersion)
+        : m_majorVersion(majorVersion), m_minorVersion(minorVersion){};
 
-    virtual const PackageVersion getFileVersion() const = 0;
-    virtual const PackageVersion getUserVersion() const = 0;
-
-    virtual const PackageTime getCreationTime() const = 0;
-    virtual const PackageTime getModifiedTime() const = 0;
-
-    virtual const PackageHeader getPackageHeader() const = 0;
-    virtual const PackageFlags getPackageFlags() const = 0;
-
-    virtual const std::vector<IndexEntry> getPackageIndex() const = 0;
+    // s4pkg::Object interface
+   public:
+    const std::string toString() const override;
 };
 
-};  // namespace s4pkg
+}  // namespace s4pkg

@@ -22,31 +22,28 @@
 
 #include <s4pkg/internal/export.h>
 #include <s4pkg/object.h>
-#include <s4pkg/package/types.h>
-
-#include <vector>
 
 namespace s4pkg {
 
-/**
- * @brief The main interface for package files
- */
-class S4PKG_EXPORT IPackage : public Object {
+class S4PKG_EXPORT PackageHeader : public Object {
    public:
-    virtual bool isValid() const = 0;
+    const unsigned long m_indexRecordEntryCount;
+    const unsigned long m_indexRecordPositionLow;
+    const unsigned long m_indexRecordSize;
+    const unsigned long long m_indexRecordPosition;
 
-    // Getters
+    PackageHeader(unsigned long indexRecordEntryCount,
+                  unsigned long indexRecordPositionLow,
+                  unsigned long indexRecordSize,
+                  unsigned long long indexRecordPosition)
+        : m_indexRecordEntryCount(indexRecordEntryCount),
+          m_indexRecordPositionLow(indexRecordPositionLow),
+          m_indexRecordSize(indexRecordSize),
+          m_indexRecordPosition(indexRecordPosition) {}
 
-    virtual const PackageVersion getFileVersion() const = 0;
-    virtual const PackageVersion getUserVersion() const = 0;
-
-    virtual const PackageTime getCreationTime() const = 0;
-    virtual const PackageTime getModifiedTime() const = 0;
-
-    virtual const PackageHeader getPackageHeader() const = 0;
-    virtual const PackageFlags getPackageFlags() const = 0;
-
-    virtual const std::vector<IndexEntry> getPackageIndex() const = 0;
+    // s4pkg::Object interface
+   public:
+    const std::string toString() const override;
 };
 
-};  // namespace s4pkg
+}  // namespace s4pkg

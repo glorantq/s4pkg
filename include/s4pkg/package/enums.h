@@ -20,33 +20,23 @@
 
 #pragma once
 
-#include <s4pkg/internal/export.h>
-#include <s4pkg/object.h>
-#include <s4pkg/package/types.h>
-
-#include <vector>
-
 namespace s4pkg {
 
 /**
- * @brief The main interface for package files
+ * @brief Type of a resource
+ * @see https://forums.thesims.com/en_US/discussion/858947/maxis-info-index
  */
-class S4PKG_EXPORT IPackage : public Object {
-   public:
-    virtual bool isValid() const = 0;
+enum ResourceType { UNKNOWN = 0, CAS_PART_RESOURCE_v42 = 0x034AEECB };
 
-    // Getters
-
-    virtual const PackageVersion getFileVersion() const = 0;
-    virtual const PackageVersion getUserVersion() const = 0;
-
-    virtual const PackageTime getCreationTime() const = 0;
-    virtual const PackageTime getModifiedTime() const = 0;
-
-    virtual const PackageHeader getPackageHeader() const = 0;
-    virtual const PackageFlags getPackageFlags() const = 0;
-
-    virtual const std::vector<IndexEntry> getPackageIndex() const = 0;
+/**
+ * @brief CompressionType of a resource
+ */
+enum CompressionType {
+    UNCOMPRESSED = 0x0000,
+    STREAMABLE = 0xfffe,
+    INTERNAL = 0xffff,
+    DELETED = 0xffe0,
+    ZLIB = 0x5a42
 };
 
-};  // namespace s4pkg
+}  // namespace s4pkg

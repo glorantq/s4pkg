@@ -22,31 +22,25 @@
 
 #include <s4pkg/internal/export.h>
 #include <s4pkg/object.h>
-#include <s4pkg/package/types.h>
 
-#include <vector>
+#include <chrono>
 
 namespace s4pkg {
 
-/**
- * @brief The main interface for package files
- */
-class S4PKG_EXPORT IPackage : public Object {
+class S4PKG_EXPORT PackageTime : public Object {
    public:
-    virtual bool isValid() const = 0;
+    const std::chrono::time_point<std::chrono::system_clock> m_timePoint;
 
-    // Getters
+    PackageTime(long long unixTime)
+        : m_timePoint(std::chrono::time_point<std::chrono::system_clock>() +
+                      std::chrono::seconds(unixTime)){};
 
-    virtual const PackageVersion getFileVersion() const = 0;
-    virtual const PackageVersion getUserVersion() const = 0;
+    PackageTime(std::chrono::time_point<std::chrono::system_clock> timePoint)
+        : m_timePoint(timePoint){};
 
-    virtual const PackageTime getCreationTime() const = 0;
-    virtual const PackageTime getModifiedTime() const = 0;
-
-    virtual const PackageHeader getPackageHeader() const = 0;
-    virtual const PackageFlags getPackageFlags() const = 0;
-
-    virtual const std::vector<IndexEntry> getPackageIndex() const = 0;
+    // s4pkg::Object interface
+   public:
+    const std::string toString() const override;
 };
 
-};  // namespace s4pkg
+}  // namespace s4pkg

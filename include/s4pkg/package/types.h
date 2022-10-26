@@ -20,33 +20,9 @@
 
 #pragma once
 
-#include <s4pkg/internal/export.h>
-#include <s4pkg/object.h>
-#include <s4pkg/package/types.h>
-
-#include <vector>
-
-namespace s4pkg {
-
-/**
- * @brief The main interface for package files
- */
-class S4PKG_EXPORT IPackage : public Object {
-   public:
-    virtual bool isValid() const = 0;
-
-    // Getters
-
-    virtual const PackageVersion getFileVersion() const = 0;
-    virtual const PackageVersion getUserVersion() const = 0;
-
-    virtual const PackageTime getCreationTime() const = 0;
-    virtual const PackageTime getModifiedTime() const = 0;
-
-    virtual const PackageHeader getPackageHeader() const = 0;
-    virtual const PackageFlags getPackageFlags() const = 0;
-
-    virtual const std::vector<IndexEntry> getPackageIndex() const = 0;
-};
-
-};  // namespace s4pkg
+#include <s4pkg/package/enums.h>
+#include <s4pkg/package/flags.h>
+#include <s4pkg/package/header.h>
+#include <s4pkg/package/indexentry.h>
+#include <s4pkg/package/time.h>
+#include <s4pkg/package/version.h>
