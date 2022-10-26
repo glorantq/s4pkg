@@ -26,6 +26,8 @@
 #include <iostream>
 #include <istream>
 
+#include <fmt/core.h>
+
 namespace s4pkg {
 
 internal::InMemoryPackage::InMemoryPackage(std::istream& stream) {
@@ -126,7 +128,12 @@ const std::vector<IndexEntry> internal::InMemoryPackage::getPackageIndex()
 }
 
 const std::string internal::InMemoryPackage::toString() const {
-    return "[ not implemented ]";  // TODO: Implement
+    return fmt::format(
+        "(InMemoryPackage) [ header={}, fileVersion={}, userVersion={}, "
+        "createdTime={}, modifiedTime={}, flags={} ]",
+        this->getPackageHeader().toString(), this->getFileVersion().toString(),
+        this->getUserVersion().toString(), this->getCreationTime().toString(),
+        this->getModifiedTime().toString(), this->getPackageFlags().toString());
 }
 
 };  // namespace s4pkg

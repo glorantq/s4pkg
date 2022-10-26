@@ -87,6 +87,8 @@ TEST_CASE("Test good in-memory package", "[package]") {
     for (const auto& entry : index) {
         std::cout << "Entry: " << entry.toString() << std::endl;
     }
+
+    std::cout << package.m_package->toString() << std::endl;
 }
 
 TEST_CASE("Test bad in-memory package", "[package]") {
