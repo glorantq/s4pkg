@@ -20,9 +20,13 @@
 
 #pragma once
 
+#include <s4pkg/internal/export.h>
 #include <s4pkg/internal/image.h>
 
 #include <memory>
+
+// TODO: Should only be exported when actively developing, users should not need
+// to rely on these functions
 
 namespace s4pkg::internal::imagecoder {
 
@@ -38,7 +42,8 @@ enum ImageFormat { LRLE, RLE2, RLES, DST, JFIF_WITH_ALPHA };
  * @param format: the format of the image to decode
  * @return an Image class if successful, nullptr on failure
  */
-std::shared_ptr<Image> decode(std::vector<uint8_t> data, ImageFormat format);
+S4PKG_EXPORT std::shared_ptr<Image> decode(const std::vector<uint8_t>& data,
+                                           ImageFormat format);
 
 /**
  * @brief Encodes an RGBA image into raw bytes
@@ -46,6 +51,7 @@ std::shared_ptr<Image> decode(std::vector<uint8_t> data, ImageFormat format);
  * @param format: the format to encode to
  * @return the encoded bytes (empty on failure)
  */
-std::vector<uint8_t> encode(Image& image, ImageFormat format);
+S4PKG_EXPORT std::vector<uint8_t> encode(const Image& image,
+                                         ImageFormat format);
 
 };  // namespace s4pkg::internal::imagecoder

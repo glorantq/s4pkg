@@ -22,8 +22,7 @@
 #define CATCH_CONFIG_WINDOWS_CRTDBG 1
 #include "catch.hpp"
 
-#include <s4pkg/internal/membuf.h>
-#include <s4pkg/internal/streams.h>
+#include <s4pkg/internal/imagecoder.h>
 #include <s4pkg/package/ipackage.h>
 #include <s4pkg/package/packages.h>
 
@@ -31,7 +30,31 @@
 #include <iostream>
 #include <istream>
 
-TEST_CASE("Test image coder", "data") {}
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
+
+TEST_CASE("Test image coder", "data") {
+    std::ifstream thumbnailStream("./thumbnail.jfif", std::ios_base::binary);
+    std::vector<uint8_t> fileContents(
+        (std::istreambuf_iterator<char>(thumbnailStream)),
+        std::istreambuf_iterator<char>());
+    thumbnailStream.close();
+
+    auto decodedThumbnail = s4pkg::internal::imagecoder::decode(
+        fileContents, s4pkg::internal::imagecoder::JFIF_WITH_ALPHA);
+
+    if (decodedThumbnail != nullptr) {
+        std::cout << "Decoded thumbnail: " << decodedThumbnail->toString()
+                  << std::endl;
+
+        stbi_write_png("./thumbnail_out.png", decodedThumbnail->getWidth(),
+                       decodedThumbnail->getHeight(), 4,
+                       decodedThumbnail->getPixelData().data(),
+                       4 * decodedThumbnail->getWidth());
+    } else {
+        std::cerr << "Failed to decode thumbnail!" << std::endl;
+    }
+}
 
 TEST_CASE("Test good in-memory package", "package") {
     std::ifstream packageStream("./test.package", std::ios_base::binary);

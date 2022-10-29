@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include <s4pkg/internal/export.h>
 #include <s4pkg/object.h>
 
 #include <inttypes.h>
@@ -27,7 +28,9 @@
 
 namespace s4pkg::internal {
 
-class Image : public Object {
+// TODO: Should only be exported when actively developing
+
+class S4PKG_EXPORT Image : public Object {
    private:
     std::vector<uint8_t> m_pixelData;
     uint32_t m_width;
@@ -36,6 +39,12 @@ class Image : public Object {
    public:
     Image(uint32_t width, uint32_t height, std::vector<uint8_t> pixelData)
         : m_pixelData(pixelData), m_width(width), m_height(height) {}
+
+    const uint32_t getWidth() const { return this->m_width; }
+    const uint32_t getHeight() const { return this->m_height; }
+    const std::vector<uint8_t> getPixelData() const {
+        return this->m_pixelData;
+    }
 
     // Object interface
    public:
