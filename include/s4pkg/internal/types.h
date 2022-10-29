@@ -86,7 +86,7 @@ typedef struct index_entry_t {
     uint32_t m_extendedCompressionType : 1;
     uint32_t m_sizeDecompressed;
 
-    compression_type_t m_compressionType;
+    uint16_t m_compressionType;
     uint16_t m_committed; /**< Typically set to 1 */
 } index_entry_t;
 

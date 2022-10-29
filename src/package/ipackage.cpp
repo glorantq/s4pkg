@@ -56,7 +56,7 @@ void IPackage::write(std::ostream& stream) const {
             0,  // m_size (set by the write method)
             1,  // m_extendedCompressionType
             0,  // m_sizeDecompressed (set by the write method)
-            compression_type_t::UNCOMPRESSED,
+            compression_type_t::ZLIB,
             1  // m_committed
         };
 
@@ -92,8 +92,6 @@ void IPackage::write(std::ostream& stream) const {
     // start of the index in the header
 
     uint32_t indexPosition = (uint32_t)stream.tellp();
-
-    fmt::printf("index position: %u\n", indexPosition);
 
     // Now we write out the package flags
 
@@ -137,10 +135,10 @@ void IPackage::write(std::ostream& stream) const {
         updatedTime,
         0,  // m_unused1
         (uint32_t)packageIndex.m_entries.size(),
-        0,  // m_indexRecordPositionLow
-        sizeof(index_entry_t),
-        {0, 0, 0},  // m_unused3
-        3,          // m_unused4
+        0,                      // m_indexRecordPositionLow
+        sizeof(index_entry_t),  // TODO: Calculate accurately
+        {0, 0, 0},              // m_unused3
+        3,                      // m_unused4
         indexPosition,
         {0, 0, 0, 0, 0, 0}  // m_unused5
     };

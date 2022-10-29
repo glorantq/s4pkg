@@ -20,34 +20,32 @@
 
 #pragma once
 
-#include <s4pkg/internal/export.h>
-#include <s4pkg/resources/iresource.h>
+#include <s4pkg/internal/image.h>
 
-namespace s4pkg::resources {
+#include <memory>
+
+namespace s4pkg::internal::imagecoder {
 
 /**
- * @brief Fallback resource for unimplemented types
+ * @brief Formats of images we can convert from/to. Not all might be implemented
+ * just yet.
  */
-class S4PKG_EXPORT FallbackResource : public IResource {
-   private:
-    std::vector<uint8_t> m_data{};
+enum ImageFormat { LRLE, RLE2, RLES, DST, JFIF_WITH_ALPHA };
 
-   public:
-    FallbackResource(uint32_t type,
-                     uint32_t instanceEx,
-                     uint32_t instance,
-                     uint32_t group,
-                     std::vector<uint8_t> data)
-        : IResource(instanceEx, instance, group, (ResourceType)type),
-          m_data(std::move(data)) {}
+/**
+ * @brief Decodes an image into RGBA pixels
+ * @param data: raw data
+ * @param format: the format of the image to decode
+ * @return an Image class if successful, nullptr on failure
+ */
+std::shared_ptr<Image> decode(std::vector<uint8_t> data, ImageFormat format);
 
-    // IResource interface
-   public:
-    std::vector<uint8_t> write() const override;
+/**
+ * @brief Encodes an RGBA image into raw bytes
+ * @param image: the image to encode
+ * @param format: the format to encode to
+ * @return the encoded bytes (empty on failure)
+ */
+std::vector<uint8_t> encode(Image& image, ImageFormat format);
 
-    // Object interface
-   public:
-    const std::string toString() const override;
-};
-
-}  // namespace s4pkg::resources
+};  // namespace s4pkg::internal::imagecoder

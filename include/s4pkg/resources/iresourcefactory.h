@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include <s4pkg/internal/export.h>
 #include <s4pkg/object.h>
 #include <s4pkg/resources/iresource.h>
 
@@ -28,7 +29,7 @@
 
 namespace s4pkg {
 
-class IResourceFactory : public Object {
+class S4PKG_EXPORT IResourceFactory : public Object {
    public:
     virtual std::shared_ptr<IResource> create(
         uint32_t type, /**< This is purely for fallback, to not break resources

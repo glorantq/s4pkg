@@ -18,30 +18,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include <s4pkg/internal/image.h>
 
-#include <s4pkg/internal/export.h>
-#include <s4pkg/resources/iresourcefactory.h>
+#include <fmt/core.h>
 
-namespace s4pkg::factories {
+namespace s4pkg::internal {
 
-/**
- * @brief Resource factory used for unknown resources. Just holds the raw binary
- * data and writes it back, so it doesn't break packages.
- */
-class S4PKG_EXPORT FallbackResourceFactory : public IResourceFactory {
-    // IResourceFactory interface
-   public:
-    std::shared_ptr<IResource> create(
-        uint32_t type,
-        uint32_t instanceEx,
-        uint32_t instance,
-        uint32_t group,
-        const std::vector<uint8_t>&) const override;
+const std::string Image::toString() const {
+    return fmt::format("Image [ width={}, height={} ]", this->m_width,
+                       this->m_height);
+}
 
-    // Object interface
-   public:
-    const std::string toString() const override;
-};
-
-}  // namespace s4pkg::factories
+}  // namespace s4pkg::internal

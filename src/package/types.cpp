@@ -34,7 +34,7 @@ const std::string PackageTime::toString() const {
 }
 
 long PackageTime::toTimestamp() const {
-    return std::chrono::duration_cast<std::chrono::seconds>(
+    return (long)std::chrono::duration_cast<std::chrono::seconds>(
                this->m_timePoint.time_since_epoch())
         .count();
 }
@@ -57,12 +57,8 @@ const std::string PackageFlags::toString() const {
 const std::string IndexEntry::toString() const {
     std::string resourceTypeName;
     switch (this->m_type) {
-        case ResourceType::CAS_PART_RESOURCE_v42:
-            resourceTypeName = "CAS Part Resource v42";
-            break;
-
-        case ResourceType::STRING_TABLE_v5:
-            resourceTypeName = "String Table v5";
+        case ResourceType::THUMBNAIL_IMAGE:
+            resourceTypeName = "Thumbnail Image";
             break;
 
         case ResourceType::UNKNOWN:

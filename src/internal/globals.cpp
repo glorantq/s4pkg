@@ -26,7 +26,8 @@ namespace s4pkg::internal::globals {
 const std::map<s4pkg::ResourceType, std::shared_ptr<s4pkg::IResourceFactory>>
     g_resourceFactoryMapping = {
         {s4pkg::ResourceType::UNKNOWN,
-         std::make_shared<s4pkg::factories::FallbackResourceFactory>()}};
+         std::make_shared<s4pkg::factories::FallbackResourceFactory>()},
+};
 
 const std::shared_ptr<s4pkg::IResourceFactory> getResourceFactoryFor(
     s4pkg::ResourceType type) {

@@ -22,13 +22,18 @@
 #define CATCH_CONFIG_WINDOWS_CRTDBG 1
 #include "catch.hpp"
 
+#include <s4pkg/internal/membuf.h>
+#include <s4pkg/internal/streams.h>
 #include <s4pkg/package/ipackage.h>
 #include <s4pkg/package/packages.h>
 
 #include <fstream>
 #include <iostream>
+#include <istream>
 
-TEST_CASE("Test good in-memory package", "[package]") {
+TEST_CASE("Test image coder", "data") {}
+
+TEST_CASE("Test good in-memory package", "package") {
     std::ifstream packageStream("./test.package", std::ios_base::binary);
     s4pkg::PackageLoadResult package = s4pkg::loadPackage(packageStream);
     packageStream.close();
@@ -95,7 +100,7 @@ TEST_CASE("Test good in-memory package", "[package]") {
     outputStream.close();
 }
 
-TEST_CASE("Test bad in-memory package", "[package]") {
+TEST_CASE("Test bad in-memory package", "package") {
     std::ifstream packageStream("./bad.package");
     s4pkg::PackageLoadResult package = s4pkg::loadPackage(packageStream);
 

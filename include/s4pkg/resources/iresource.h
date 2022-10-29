@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include <s4pkg/internal/export.h>
 #include <s4pkg/object.h>
 #include <s4pkg/package/enums.h>
 
@@ -27,12 +28,29 @@
 
 namespace s4pkg {
 
-class IResource : public Object {
+class S4PKG_EXPORT IResource : public Object {
+   protected:
+    uint32_t m_instanceEx;
+    uint32_t m_instance;
+    uint32_t m_group;
+    ResourceType m_resourceType;
+
+    IResource(uint32_t instanceEx,
+              uint32_t instance,
+              uint32_t group,
+              ResourceType resourceType)
+        : m_instanceEx(instanceEx),
+          m_instance(instance),
+          m_group(group),
+          m_resourceType(resourceType) {}
+
    public:
-    virtual uint32_t getInstanceEx() const = 0;
-    virtual uint32_t getInstance() const = 0;
-    virtual uint32_t getGroup() const = 0;
-    virtual ResourceType getResourceType() const = 0;
+    virtual uint32_t getInstanceEx() const { return this->m_instanceEx; };
+    virtual uint32_t getInstance() const { return this->m_instance; }
+    virtual uint32_t getGroup() const { return this->m_group; }
+    virtual ResourceType getResourceType() const {
+        return this->m_resourceType;
+    }
     virtual std::vector<uint8_t> write() const = 0;
 };
 

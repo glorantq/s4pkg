@@ -9,18 +9,34 @@ set(CMAKE_CXX_STANDARD 17)
 
 include(GenerateExportHeader)
 
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vendor/fmt)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vendor/miniz)
+
+# Let's not build in the source tree okay? (looking at you, miniz)
+
+set_target_properties(miniz PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+
+set_target_properties(fmt PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
 file(GLOB_RECURSE LIB_HEADER_FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/*/*.h)
 add_library(s4pkg SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/package/impl/inmemorypackage.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/package/ipackage.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/package/packages.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/package/types.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/streams.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/streams.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/globals.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/fallbackresourcefactory.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/fallbackresource.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/stb_image.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/image.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/imagecoder.cpp
     ${LIB_HEADER_FILES})
 
 target_link_libraries(s4pkg PRIVATE fmt::fmt miniz)
@@ -28,7 +44,7 @@ target_link_libraries(s4pkg PRIVATE fmt::fmt miniz)
 generate_export_header(s4pkg
         EXPORT_FILE_NAME "${CMAKE_BINARY_DIR}/s4pkg/internal/export.h")
 
-target_include_directories(s4pkg PUBLIC include ${CMAKE_BINARY_DIR})
+target_include_directories(s4pkg PUBLIC include ${CMAKE_BINARY_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/vendor/stb")
 set_target_properties(s4pkg PROPERTIES
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION}
