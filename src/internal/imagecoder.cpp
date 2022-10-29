@@ -41,8 +41,9 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
     int height = 0;
     int channelsInFile = 0;
 
-    unsigned char* decodedFull = stbi_load_from_memory(
-        data.data(), data.size(), &width, &height, &channelsInFile, 3);
+    unsigned char* decodedFull =
+        stbi_load_from_memory(data.data(), data.size(), &width, &height,
+                              &channelsInFile, 3);  // We only need RGBA
 
     if (decodedFull == nullptr) {
         return nullptr;
@@ -85,6 +86,14 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
                                 ((data[alphaSegmentStart + 10] << 8) & 0xFF) |
                                 (data[alphaSegmentStart + 11] & 0xFF);
 
+    if (alphaImageLength + 10 !=
+        alphaApp0Length) {  // Some more sanity-checking that this is really a
+                            // good file and we found the alpha (10 is the
+                            // length of the header before the image data,
+                            // excluding the APP0 marker)
+        return nullptr;
+    }
+
     // Read the alpha image
     std::vector<uint8_t> alphaData(alphaImageLength);
 
@@ -96,9 +105,12 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
     int alphaWidth = 0;
     int alphaHeight = 0;
     int alphaChannelsInFile = 0;
-    unsigned char* alphaImage =
-        stbi_load_from_memory(alphaData.data(), alphaData.size(), &alphaWidth,
-                              &alphaHeight, &alphaChannelsInFile, 1);
+    unsigned char* alphaImage = stbi_load_from_memory(
+        alphaData.data(), alphaData.size(), &alphaWidth, &alphaHeight,
+        &alphaChannelsInFile,
+        1);  // We only care about one component in this image, because R = G =
+             // B, and this contains the alpha value (white fully opaque, black
+             // fully transparent)
 
     if (alphaImage == nullptr) {
         return nullptr;
@@ -111,6 +123,7 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
 
     std::vector<uint8_t> finalImageData(width * height * 4);
 
+    // Combine the two images into a single RGBA image
     for (int i = 0; i < width * height; i++) {
         uint8_t r = decodedFull[i * 3];
         uint8_t g = decodedFull[i * 3 + 1];
