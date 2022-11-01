@@ -20,93 +20,106 @@
 
 #include <s4pkg/internal/imagecoder.h>
 
+#include <optional>
 #include <unordered_map>
 
 #include <stb_image.h>
+#include <stb_image_write.h>
+
+#include <jpeglib.h>
+
+#include <fmt/printf.h>
 
 namespace s4pkg::internal::imagecoder {
 
 // Decoders
 
 std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
-    // Validate that this is in fact a JFIF file
+    // "JFIF with Alpha" is the name I've given to the format being used to
+    // store thumbnails in packages. The file is an almost standard JFIF file,
+    // able to be read by regular programs. It contains the RBB data compressed
+    // as a jpeg, and an alpha mask embedded in a section named "ALFA" (with no
+    // null terminator, hence "almost" standard), that is a greyscale PNG image
+    // encoding the alpha value at each pixel
 
-    if (data[0] != 0xFF || data[1] != 0xD8) {  // Start of Image
+    // Set up the decompression of the whole JPEG file
+    struct jpeg_decompress_struct cinfo;
+    struct jpeg_error_mgr jerr;
+
+    cinfo.err = jpeg_std_error(&jerr);
+
+    jpeg_create_decompress(&cinfo);
+    jpeg_mem_src(&cinfo, data.data(), data.size());
+
+    // We save all APP0 markers, since one of them starting with ALFA contains
+    // the alpha values in the form of a greyscale PNG image
+    jpeg_save_markers(&cinfo, JPEG_APP0, 0xFFFF);
+    jpeg_read_header(&cinfo, true);
+
+    // If we find the alpha, save it here
+    std::optional<std::vector<uint8_t>> alphaData;
+
+    // Look through all the read markers to find the alpha image
+    jpeg_saved_marker_ptr currentMarker = cinfo.marker_list;
+    while (currentMarker != nullptr) {
+        if (currentMarker->data[0] == 'A' && currentMarker->data[1] == 'L' &&
+            currentMarker->data[2] == 'F' && currentMarker->data[3] == 'A') {
+            uint32_t alphaImageLength =
+                ((currentMarker->data[4] << 24) & 0xFF) |
+                ((currentMarker->data[5] << 16) & 0xFF) |
+                ((currentMarker->data[6] << 8) & 0xFF) |
+                (currentMarker->data[7] & 0xFF);
+
+            alphaData = std::vector<uint8_t>(alphaImageLength);
+
+            for (int i = 0; i < alphaImageLength; i++) {
+                alphaData.value()[i] = currentMarker->data[8 + i];
+            }
+        }
+
+        currentMarker = currentMarker->next;
+    }
+
+    // No alpha, not a valid file
+    if (!alphaData) {
+        jpeg_destroy_decompress(&cinfo);
         return nullptr;
     }
 
-    // Decode the whole file as a JPEG, to get the RGB values.
-
-    int width = 0;
-    int height = 0;
-    int channelsInFile = 0;
-
-    unsigned char* decodedFull =
-        stbi_load_from_memory(data.data(), data.size(), &width, &height,
-                              &channelsInFile, 3);  // We only need RGBA
-
-    if (decodedFull == nullptr) {
+    // Now we decompress the JPEG image (final R, G, B channels)
+    if (!jpeg_start_decompress(&cinfo)) {
         return nullptr;
     }
 
-    // We extract the alpha, this is stored in an APP0 tag right after JFIF-APP0
+    int width = cinfo.output_width;
+    int height = cinfo.output_height;
 
-    // First two bytes in the file are the SOI tag, then comes the first APP0
-    // marker for JFIF-APP0, then the size of that field. The alpha is stored
-    // right after this, in a non-standard way.
-    uint32_t jfifApp0Start = 2;
-    uint16_t jfifApp0Length = ((data[jfifApp0Start + 2] << 8) & 0xFF) |
-                              (data[jfifApp0Start + 3] & 0xFF);
+    uint32_t rowStride = cinfo.output_width * cinfo.output_components;
+    JSAMPARRAY buffer = (cinfo.mem->alloc_sarray)((j_common_ptr)&cinfo,
+                                                  JPOOL_IMAGE, rowStride, 1);
 
-    uint32_t alphaSegmentStart = jfifApp0Start + 2 + jfifApp0Length;
+    std::vector<uint8_t> decodedFull(
+        cinfo.output_width * cinfo.output_components * cinfo.output_height);
 
-    // We should have a marker here
+    while (cinfo.output_scanline < cinfo.output_height) {
+        (void)jpeg_read_scanlines(&cinfo, buffer, 1);
 
-    if (data[alphaSegmentStart] != 0xFF ||
-        data[alphaSegmentStart + 1] != 0xE0) {
-        return nullptr;
+        for (int i = 0; i < rowStride; i++) {
+            decodedFull[(cinfo.output_scanline - 1) * rowStride + i] =
+                buffer[0][i];
+        }
     }
 
-    // Read the size of the alpha field
-
-    uint16_t alphaApp0Length = ((data[alphaSegmentStart + 2] << 8) & 0xFF) |
-                               (data[alphaSegmentStart + 3] & 0xFF);
-
-    // Verify this actually is the alpha of the image
-    if (data[alphaSegmentStart + 4] != 'A' ||
-        data[alphaSegmentStart + 5] != 'L' ||
-        data[alphaSegmentStart + 6] != 'F' ||
-        data[alphaSegmentStart + 7] != 'A') {
-        return nullptr;
-    }
-
-    // Read the size of the image
-    uint32_t alphaImageLength = ((data[alphaSegmentStart + 8] << 24) & 0xFF) |
-                                ((data[alphaSegmentStart + 9] << 16) & 0xFF) |
-                                ((data[alphaSegmentStart + 10] << 8) & 0xFF) |
-                                (data[alphaSegmentStart + 11] & 0xFF);
-
-    if (alphaImageLength + 10 !=
-        alphaApp0Length) {  // Some more sanity-checking that this is really a
-                            // good file and we found the alpha (10 is the
-                            // length of the header before the image data,
-                            // excluding the APP0 marker)
-        return nullptr;
-    }
-
-    // Read the alpha image
-    std::vector<uint8_t> alphaData(alphaImageLength);
-
-    for (int i = 0; i < alphaImageLength; i++) {
-        alphaData[i] = data[alphaSegmentStart + 12 + i];
-    }
+    // We're done with the JPEG
+    jpeg_finish_decompress(&cinfo);
+    jpeg_destroy_decompress(&cinfo);
 
     // Decode the alpha
     int alphaWidth = 0;
     int alphaHeight = 0;
     int alphaChannelsInFile = 0;
     unsigned char* alphaImage = stbi_load_from_memory(
-        alphaData.data(), alphaData.size(), &alphaWidth, &alphaHeight,
+        alphaData->data(), alphaData->size(), &alphaWidth, &alphaHeight,
         &alphaChannelsInFile,
         1);  // We only care about one component in this image, because R = G =
              // B, and this contains the alpha value (white fully opaque, black
@@ -137,13 +150,16 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
         finalImageData[i * 4 + 3] = a;
     }
 
-    stbi_image_free(decodedFull);
     stbi_image_free(alphaImage);
 
     return std::make_shared<Image>(width, height, finalImageData);
 }
 
 // Encoders
+
+std::vector<uint8_t> encodeJfifWithAlpha(const Image& image) {
+    return {};
+}
 
 // Implementation of the s4pkg::internal::imagecoder::(decode / encode)
 // functions, which just delegate to the actual implementations defined
@@ -152,14 +168,13 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
 typedef std::shared_ptr<Image> (*t_decoderFunction)(
     const std::vector<uint8_t>&);
 
-typedef std::vector<uint8_t> (*t_encoderFunction)(const Image&, ImageFormat);
+typedef std::vector<uint8_t> (*t_encoderFunction)(const Image&);
 
 const std::unordered_map<ImageFormat, t_decoderFunction> g_decoderMapping = {
     {JFIF_WITH_ALPHA, &decodeJfifWithAlpha}};
 
 const std::unordered_map<ImageFormat, t_encoderFunction> g_encoderMapping = {
-
-};
+    {JFIF_WITH_ALPHA, &encodeJfifWithAlpha}};
 
 template <typename T>
 T tryGetFunction(const std::unordered_map<ImageFormat, T>& mapping,
@@ -184,10 +199,9 @@ std::shared_ptr<Image> decode(const std::vector<uint8_t>& data,
 std::vector<uint8_t> encode(const Image& image, ImageFormat format) {
     t_encoderFunction chosenEncoder = tryGetFunction(g_encoderMapping, format);
     if (chosenEncoder != nullptr) {
-        return chosenEncoder(image, format);
+        return chosenEncoder(image);
     }
 
     return {};
 }
-
 };  // namespace s4pkg::internal::imagecoder

@@ -56,7 +56,7 @@ void IPackage::write(std::ostream& stream) const {
             0,  // m_size (set by the write method)
             1,  // m_extendedCompressionType
             0,  // m_sizeDecompressed (set by the write method)
-            compression_type_t::ZLIB,
+            compression_type_t::UNCOMPRESSED,
             1  // m_committed
         };
 

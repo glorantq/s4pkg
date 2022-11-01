@@ -12,6 +12,7 @@ include(GenerateExportHeader)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vendor/fmt)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vendor/miniz)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vendor/libjpeg-turbo)
 
 # Let's not build in the source tree okay? (looking at you, miniz)
 
@@ -21,6 +22,11 @@ set_target_properties(miniz PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
 set_target_properties(fmt PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+
+set_target_properties(jpeg PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
@@ -39,12 +45,14 @@ add_library(s4pkg SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/package/impl/inmemorypa
     ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/imagecoder.cpp
     ${LIB_HEADER_FILES})
 
-target_link_libraries(s4pkg PRIVATE fmt::fmt miniz)
+target_link_libraries(s4pkg PRIVATE fmt::fmt miniz jpeg)
 
 generate_export_header(s4pkg
         EXPORT_FILE_NAME "${CMAKE_BINARY_DIR}/s4pkg/internal/export.h")
 
-target_include_directories(s4pkg PUBLIC include ${CMAKE_BINARY_DIR} "${CMAKE_CURRENT_SOURCE_DIR}/vendor/stb")
+target_include_directories(s4pkg PUBLIC include ${CMAKE_BINARY_DIR})
+target_include_directories(s4pkg PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/vendor/stb" "${CMAKE_CURRENT_SOURCE_DIR}/vendor/libjpeg-turbo" "${CMAKE_CURRENT_BINARY_DIR}/vendor/libjpeg-turbo")
+
 set_target_properties(s4pkg PROPERTIES
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION}

@@ -43,17 +43,18 @@ TEST_CASE("Test image coder", "data") {
     auto decodedThumbnail = s4pkg::internal::imagecoder::decode(
         fileContents, s4pkg::internal::imagecoder::JFIF_WITH_ALPHA);
 
-    if (decodedThumbnail != nullptr) {
-        std::cout << "Decoded thumbnail: " << decodedThumbnail->toString()
-                  << std::endl;
+    REQUIRE(decodedThumbnail != nullptr);
 
-        stbi_write_png("./thumbnail_out.png", decodedThumbnail->getWidth(),
-                       decodedThumbnail->getHeight(), 4,
-                       decodedThumbnail->getPixelData().data(),
-                       4 * decodedThumbnail->getWidth());
-    } else {
-        std::cerr << "Failed to decode thumbnail!" << std::endl;
-    }
+    std::cout << "Decoded thumbnail: " << decodedThumbnail->toString()
+              << std::endl;
+
+    REQUIRE(decodedThumbnail->getWidth() == 104);
+    REQUIRE(decodedThumbnail->getHeight() == 148);
+
+    stbi_write_png("./thumbnail_out.png", decodedThumbnail->getWidth(),
+                   decodedThumbnail->getHeight(), 4,
+                   decodedThumbnail->getPixelData().data(),
+                   4 * decodedThumbnail->getWidth());
 }
 
 TEST_CASE("Test good in-memory package", "package") {
