@@ -43,7 +43,7 @@ void libjpegErrorExit(jpeg_common_struct* ptr) {
 // We don't want error messages
 void libjpegEmitMessage(jpeg_common_struct* ptr, int32_t level) {}
 
-// For some reason the write_*_to_mem functions aren't available from
+// For some reason the stbi_write_*_to_mem functions aren't available from
 // stb_image_write.h
 STBIWDEF unsigned char* stbi_write_png_to_mem(const unsigned char* pixels,
                                               int stride_bytes,

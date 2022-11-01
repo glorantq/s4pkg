@@ -56,6 +56,7 @@ TEST_CASE("Test image coder", "data") {
                    decodedThumbnail->getPixelData().data(),
                    4 * decodedThumbnail->getWidth());
 
+    std::cout << "Re-encoding thumbnail..." << std::endl;
     auto encodedThumbnail = s4pkg::internal::imagecoder::encode(
         *decodedThumbnail, s4pkg::internal::imagecoder::JFIF_WITH_ALPHA);
 
