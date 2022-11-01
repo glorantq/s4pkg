@@ -7,3 +7,6 @@
 [submodule "vendor/libjpeg-turbo"]
 	path = vendor/libjpeg-turbo
 	url = https://github.com/glorantq/libjpeg-turbo
+[submodule "vendor/nvidia-texture-tools"]
+	path = vendor/nvidia-texture-tools
+	url = https://github.com/glorantq/nvidia-texture-tools
