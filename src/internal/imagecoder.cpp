@@ -32,6 +32,19 @@
 
 namespace s4pkg::internal::imagecoder {
 
+// Error handling for libjpeg
+
+// If we encounter a fatal error, set the boolean in the struct to true, so we
+// can return nullptr from our methods
+void libjpegErrorExit(jpeg_common_struct* ptr) {
+    if (ptr->client_data != nullptr) {
+        *((bool*)ptr->client_data) = true;
+    }
+}
+
+// We don't want error messages
+void libjpegEmitMessage(jpeg_common_struct* ptr, int32_t level) {}
+
 // Decoders
 
 std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
@@ -46,15 +59,32 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
     struct jpeg_decompress_struct cinfo;
     struct jpeg_error_mgr jerr;
 
+    // This will be set whenever a fatal error is encountered
+    bool hasError = false;
+    cinfo.client_data = &hasError;
+
     cinfo.err = jpeg_std_error(&jerr);
+
+    jerr.error_exit = &libjpegErrorExit;
+    jerr.emit_message = &libjpegEmitMessage;
 
     jpeg_create_decompress(&cinfo);
     jpeg_mem_src(&cinfo, data.data(), data.size());
+
+    if (hasError) {
+        jpeg_destroy_decompress(&cinfo);
+        return nullptr;
+    }
 
     // We save all APP0 markers, since one of them starting with ALFA contains
     // the alpha values in the form of a greyscale PNG image
     jpeg_save_markers(&cinfo, JPEG_APP0, 0xFFFF);
     jpeg_read_header(&cinfo, true);
+
+    if (hasError) {
+        jpeg_destroy_decompress(&cinfo);
+        return nullptr;
+    }
 
     // If we find the alpha, save it here
     std::optional<std::vector<uint8_t>> alphaData;
@@ -64,16 +94,28 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
     while (currentMarker != nullptr) {
         if (currentMarker->data[0] == 'A' && currentMarker->data[1] == 'L' &&
             currentMarker->data[2] == 'F' && currentMarker->data[3] == 'A') {
+            // The size of the embedded PNG image. This should be the same as
+            // currentMarker->data_length - 8 (identifier + 32-bit integer for
+            // length)
             uint32_t alphaImageLength =
                 ((currentMarker->data[4] << 24) & 0xFF) |
                 ((currentMarker->data[5] << 16) & 0xFF) |
                 ((currentMarker->data[6] << 8) & 0xFF) |
                 (currentMarker->data[7] & 0xFF);
 
+            if (alphaImageLength !=
+                currentMarker->data_length - 8) {  // Some sanity-checking
+                currentMarker = currentMarker->next;
+                continue;
+            }
+
             alphaData = std::vector<uint8_t>(alphaImageLength);
 
             for (int i = 0; i < alphaImageLength; i++) {
-                alphaData.value()[i] = currentMarker->data[8 + i];
+                alphaData.value()[i] =
+                    currentMarker->data[8 + i];  // The image is stored after
+                                                 // the identifier (4 bytes) and
+                                                 // the image length (4 bytes)
             }
         }
 
@@ -88,6 +130,7 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
 
     // Now we decompress the JPEG image (final R, G, B channels)
     if (!jpeg_start_decompress(&cinfo)) {
+        jpeg_destroy_decompress(&cinfo);
         return nullptr;
     }
 
@@ -95,18 +138,22 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
     int height = cinfo.output_height;
 
     uint32_t rowStride = cinfo.output_width * cinfo.output_components;
-    JSAMPARRAY buffer = (cinfo.mem->alloc_sarray)((j_common_ptr)&cinfo,
-                                                  JPOOL_IMAGE, rowStride, 1);
+    JSAMPARRAY scanlineBuffer = (cinfo.mem->alloc_sarray)(
+        (j_common_ptr)&cinfo, JPOOL_IMAGE, rowStride, 1);
 
-    std::vector<uint8_t> decodedFull(
-        cinfo.output_width * cinfo.output_components * cinfo.output_height);
+    std::vector<uint8_t> decodedFull(rowStride * cinfo.output_height);
 
     while (cinfo.output_scanline < cinfo.output_height) {
-        (void)jpeg_read_scanlines(&cinfo, buffer, 1);
+        if (jpeg_read_scanlines(&cinfo, scanlineBuffer, 1) > 0) {
+            for (int i = 0; i < rowStride; i++) {
+                decodedFull[(cinfo.output_scanline - 1) * rowStride + i] =
+                    scanlineBuffer[0][i];
+            }
+        }
 
-        for (int i = 0; i < rowStride; i++) {
-            decodedFull[(cinfo.output_scanline - 1) * rowStride + i] =
-                buffer[0][i];
+        if (hasError) {
+            jpeg_destroy_decompress(&cinfo);
+            return nullptr;
         }
     }
 
