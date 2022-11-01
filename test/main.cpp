@@ -55,6 +55,17 @@ TEST_CASE("Test image coder", "data") {
                    decodedThumbnail->getHeight(), 4,
                    decodedThumbnail->getPixelData().data(),
                    4 * decodedThumbnail->getWidth());
+
+    auto encodedThumbnail = s4pkg::internal::imagecoder::encode(
+        *decodedThumbnail, s4pkg::internal::imagecoder::JFIF_WITH_ALPHA);
+
+    REQUIRE(encodedThumbnail.size() > 0);
+
+    std::ofstream thumbnailOut("./thumbnail_out.jfif", std::ios_base::binary);
+    for (int i = 0; i < encodedThumbnail.size(); i++) {
+        thumbnailOut.write((const char*)&encodedThumbnail[i], 1);
+    }
+    thumbnailOut.close();
 }
 
 TEST_CASE("Test good in-memory package", "package") {

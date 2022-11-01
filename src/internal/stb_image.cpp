@@ -18,8 +18,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <miniz.h>
 
+static unsigned char* mz_stbi_zlib_compress(unsigned char* data,
+                                            int data_len,
+                                            int* out_len,
+                                            int quality) {
+    mz_ulong buflen = mz_compressBound(data_len);
+
+    unsigned char* buf = (unsigned char*)malloc(buflen);
+
+    if (buf == NULL ||
+        mz_compress2(buf, &buflen, data, data_len, quality) != 0) {
+        free(buf);
+        return NULL;
+    }
+
+    *out_len = buflen;
+    return buf;
+}
+
+#define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+
+#define STBIW_ZLIB_COMPRESS mz_stbi_zlib_compress
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>

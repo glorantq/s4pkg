@@ -28,8 +28,6 @@
 
 #include <jpeglib.h>
 
-#include <fmt/printf.h>
-
 namespace s4pkg::internal::imagecoder {
 
 // Error handling for libjpeg
@@ -45,15 +43,24 @@ void libjpegErrorExit(jpeg_common_struct* ptr) {
 // We don't want error messages
 void libjpegEmitMessage(jpeg_common_struct* ptr, int32_t level) {}
 
+// For some reason the write_*_to_mem functions aren't available from
+// stb_image_write.h
+STBIWDEF unsigned char* stbi_write_png_to_mem(const unsigned char* pixels,
+                                              int stride_bytes,
+                                              int x,
+                                              int y,
+                                              int n,
+                                              int* out_len);
+
 // Decoders
 
 std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
     // "JFIF with Alpha" is the name I've given to the format being used to
-    // store thumbnails in packages. The file is an almost standard JFIF file,
+    // store thumbnails in packages. The is a standard JFIF file,
     // able to be read by regular programs. It contains the RBB data compressed
-    // as a jpeg, and an alpha mask embedded in a section named "ALFA" (with no
-    // null terminator, hence "almost" standard), that is a greyscale PNG image
-    // encoding the alpha value at each pixel
+    // as a jpeg, and an alpha mask embedded in an APP0 section named "ALFA"
+    // (with no null terminator) that is a greyscale PNG image encoding the
+    // alpha value at each pixel
 
     // Set up the decompression of the whole JPEG file
     struct jpeg_decompress_struct cinfo;
@@ -141,12 +148,12 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
     JSAMPARRAY scanlineBuffer = (cinfo.mem->alloc_sarray)(
         (j_common_ptr)&cinfo, JPOOL_IMAGE, rowStride, 1);
 
-    std::vector<uint8_t> decodedFull(rowStride * cinfo.output_height);
+    std::vector<uint8_t> rgbImage(rowStride * cinfo.output_height);
 
     while (cinfo.output_scanline < cinfo.output_height) {
         if (jpeg_read_scanlines(&cinfo, scanlineBuffer, 1) > 0) {
             for (int i = 0; i < rowStride; i++) {
-                decodedFull[(cinfo.output_scanline - 1) * rowStride + i] =
+                rgbImage[(cinfo.output_scanline - 1) * rowStride + i] =
                     scanlineBuffer[0][i];
             }
         }
@@ -161,7 +168,7 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
     jpeg_finish_decompress(&cinfo);
     jpeg_destroy_decompress(&cinfo);
 
-    // Decode the alpha
+    // Decode the alpha (final A channel)
     int alphaWidth = 0;
     int alphaHeight = 0;
     int alphaChannelsInFile = 0;
@@ -181,31 +188,154 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
         return nullptr;
     }
 
-    std::vector<uint8_t> finalImageData(width * height * 4);
+    std::vector<uint8_t> finalImage(width * height * 4);
 
     // Combine the two images into a single RGBA image
     for (int i = 0; i < width * height; i++) {
-        uint8_t r = decodedFull[i * 3];
-        uint8_t g = decodedFull[i * 3 + 1];
-        uint8_t b = decodedFull[i * 3 + 2];
+        uint8_t r = rgbImage[i * 3];
+        uint8_t g = rgbImage[i * 3 + 1];
+        uint8_t b = rgbImage[i * 3 + 2];
 
         uint8_t a = alphaImage[i];
 
-        finalImageData[i * 4] = r;
-        finalImageData[i * 4 + 1] = g;
-        finalImageData[i * 4 + 2] = b;
-        finalImageData[i * 4 + 3] = a;
+        finalImage[i * 4] = r;
+        finalImage[i * 4 + 1] = g;
+        finalImage[i * 4 + 2] = b;
+        finalImage[i * 4 + 3] = a;
     }
 
     stbi_image_free(alphaImage);
 
-    return std::make_shared<Image>(width, height, finalImageData);
+    return std::make_shared<Image>(width, height, finalImage);
 }
 
 // Encoders
 
 std::vector<uint8_t> encodeJfifWithAlpha(const Image& image) {
-    return {};
+    // Set up vectors for the RGB and A channels of the image
+    std::vector<uint8_t> rgbData(image.getWidth() * image.getHeight() * 3);
+    std::vector<uint8_t> alphaData(image.getWidth() * image.getHeight());
+
+    // Separate the original image into an RGB array that will be JPEG
+    // compressed, and an alpha array that will be saved as a greyscale PNG
+    for (int i = 0; i < image.getWidth() * image.getHeight(); i++) {
+        rgbData[i * 3] = image.getPixelData()[i * 4];
+        rgbData[i * 3 + 1] = image.getPixelData()[i * 4 + 1];
+        rgbData[i * 3 + 2] = image.getPixelData()[i * 4 + 2];
+
+        alphaData[i] = image.getPixelData()[i * 4 + 3];
+    }
+
+    // Write the alpha to a PNG
+    int32_t alphaImageSize = 0;
+    unsigned char* alphaImage = stbi_write_png_to_mem(
+        (const unsigned char*)alphaData.data(), image.getWidth(),
+        image.getWidth(), image.getHeight(), 1, &alphaImageSize);
+
+    if (alphaImage == nullptr) {
+        return {};
+    }
+
+    // Set up the JPEG encoder
+    struct jpeg_compress_struct cinfo;
+    struct jpeg_error_mgr jerr;
+
+    // This will be set whenever a fatal error is encountered
+    bool hasError = false;
+    cinfo.client_data = &hasError;
+
+    cinfo.err = jpeg_std_error(&jerr);
+
+    jerr.error_exit = &libjpegErrorExit;
+    jerr.emit_message = &libjpegEmitMessage;
+
+    jpeg_create_compress(&cinfo);
+
+    // Let libjpeg automatically manage the buffer
+    unsigned char* jpegBuffer = nullptr;
+    unsigned long jpegBufferSize = 0;
+    jpeg_mem_dest(&cinfo, &jpegBuffer, &jpegBufferSize);
+
+    // Feed it some initial information about the image
+    cinfo.image_height = image.getHeight();
+    cinfo.image_width = image.getWidth();
+    cinfo.input_components = 3;
+    cinfo.in_color_space = JCS_RGB;
+
+    jpeg_set_defaults(&cinfo);
+    jpeg_set_quality(&cinfo, 100, true);
+
+    if (hasError) {
+        jpeg_destroy_compress(&cinfo);
+
+        free(alphaImage);
+        free(jpegBuffer);
+
+        return {};
+    }
+
+    jpeg_start_compress(&cinfo, true);
+
+    // Set up the ALFA APP0 data
+    std::vector<uint8_t> alphaApp0Segment(4 + 4 + alphaImageSize);
+    alphaApp0Segment[0] = 'A';
+    alphaApp0Segment[1] = 'L';
+    alphaApp0Segment[2] = 'F';
+    alphaApp0Segment[3] = 'A';
+
+    alphaApp0Segment[4] = (alphaImageSize >> 24 & 0xFF) << 24;
+    alphaApp0Segment[5] = (alphaImageSize >> 16 & 0xFF) << 16;
+    alphaApp0Segment[6] = (alphaImageSize >> 8 & 0xFF) << 8;
+    alphaApp0Segment[7] = (alphaImageSize & 0xFF);
+
+    // Copy the PNG image from before into the APP0 data
+    for (int i = 0; i < alphaImageSize; i++) {
+        alphaApp0Segment[8 + i] = alphaImage[i];
+    }
+
+    free(alphaImage);
+
+    // Write the alpha segment into the JPEG header
+    jpeg_write_marker(&cinfo, JPEG_APP0, alphaApp0Segment.data(),
+                      alphaApp0Segment.size());
+
+    uint32_t rowStride = image.getWidth() * 3;
+
+    JSAMPROW rowPointer[1];
+
+    // Write the RGB values line-by-line encoded as JPEG
+    while (cinfo.next_scanline < cinfo.image_height) {
+        rowPointer[0] = rgbData.data() + (cinfo.next_scanline * rowStride);
+
+        if (jpeg_write_scanlines(&cinfo, rowPointer, 1) != 1) {
+            jpeg_destroy_compress(&cinfo);
+            free(jpegBuffer);
+
+            return {};
+        }
+    }
+
+    // We're done with the file
+    jpeg_finish_compress(&cinfo);
+
+    if (hasError) {
+        jpeg_destroy_compress(&cinfo);
+        free(jpegBuffer);
+
+        return {};
+    }
+
+    // Copy the final image bytes into a vector for returning
+    std::vector<uint8_t> finalData(jpegBufferSize);
+    for (int i = 0; i < jpegBufferSize; i++) {
+        finalData[i] = jpegBuffer[i];
+    }
+
+    // Clean up the JPEG encoder, and we're done
+    jpeg_destroy_compress(&cinfo);
+    free(jpegBuffer);
+
+    return finalData;
 }
 
 // Implementation of the s4pkg::internal::imagecoder::(decode / encode)
