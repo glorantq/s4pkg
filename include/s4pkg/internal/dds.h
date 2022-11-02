@@ -23,8 +23,18 @@
 #include <cinttypes>
 #include <istream>
 #include <string>
+#include <vector>
+
+#ifndef MAKE_FOURCC
+#define MAKE_FOURCC(ch0, ch1, ch2, ch3)                           \
+    ((uint32_t)(uint8_t)(ch0) | ((uint32_t)(uint8_t)(ch1) << 8) | \
+     ((uint32_t)(uint8_t)(ch2) << 16) | ((uint32_t)(uint8_t)(ch3) << 24))
+#endif
 
 namespace s4pkg::internal::dds {
+
+// For a detailed description of these structs and their members, see:
+// https://learn.microsoft.com/fi-fi/windows/win32/direct3ddds/dx-graphics-dds-pguide#dds-file-layout
 
 typedef enum dds_pixelformat_flags_t {
     DDPF_ALPHAPIXELS = 0x1,
@@ -85,5 +95,20 @@ std::string headerToString(const dds_header_t&);
 
 dds_pixelformat_t readPixelFormat(std::istream&);
 dds_header_t readHeader(std::istream&);
+
+typedef struct dds_file_t {
+    dds_header_t m_header;
+    std::vector<uint8_t> m_mainImage;
+    std::vector<std::vector<uint8_t>> m_mipmaps;
+} dds_file_t;
+
+/**
+ * @brief Read a DDS file. Compressed files only, that's what the game uses
+ * anyways
+ * @return whether the reading was successful or not
+ */
+bool readFile(std::istream&, dds_file_t&);
+
+std::string fileToString(const dds_file_t&);
 
 };  // namespace s4pkg::internal::dds

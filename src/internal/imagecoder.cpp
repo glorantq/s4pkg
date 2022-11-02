@@ -21,7 +21,9 @@
 #include <s4pkg/internal/dds.h>
 #include <s4pkg/internal/imagecoder.h>
 #include <s4pkg/internal/membuf.h>
+#include <s4pkg/internal/streams.h>
 
+#include <cmath>
 #include <optional>
 #include <unordered_map>
 
@@ -31,6 +33,8 @@
 #include <jpeglib.h>
 
 #include <fmt/printf.h>
+
+#include <squish.h>
 
 namespace s4pkg::internal::imagecoder {
 
@@ -213,14 +217,61 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
     return std::make_shared<Image>(width, height, finalImage);
 }
 
-std::shared_ptr<Image> decodeDst5(const std::vector<uint8_t>& data) {
+// This is split into a separate method because more than one resource uses DXT5
+// compressed textures; they are just stored differently in the package. We
+// first convert them back to DXT5, then delegate to this method for the actual
+// decoding.
+std::shared_ptr<Image> decodeDxt5(const std::vector<uint8_t>& data) {
     membuf streamBuffer(data.data(), data.size());
     std::istream stream(&streamBuffer, std::ios_base::binary);
 
-    dds::dds_header_t header = dds::readHeader(stream);
-    fmt::printf("%s\n", dds::headerToString(header));
+    // Try to read in the DDS file
+    dds::dds_file_t file{};
+    if (!dds::readFile(stream, file)) {
+        return nullptr;
+    }
+
+    // Verify that it is indeed compressed as DXT5
+    if (file.m_header.m_pixelFormat.m_fourCC !=
+        MAKE_FOURCC('D', 'X', 'T', '5')) {
+        return nullptr;
+    }
+
+    // This is just for testing, decompress the main image, then the mipmaps,
+    // and write all of them to disk as PNG (again, just testing)
+    std::vector<uint8_t> decompressedData(file.m_header.m_width *
+                                          file.m_header.m_height * 4);
+
+    squish::DecompressImage(decompressedData.data(), file.m_header.m_width,
+                            file.m_header.m_height, file.m_mainImage.data(),
+                            squish::kDxt5);
+
+    stbi_write_png("./dxt-dec-main.png", file.m_header.m_width,
+                   file.m_header.m_height, 4, decompressedData.data(),
+                   file.m_header.m_width * 4);
+
+    for (int i = 0; i < file.m_mipmaps.size(); i++) {
+        uint32_t w = file.m_header.m_width / std::pow(2, i + 1);
+        uint32_t h = file.m_header.m_height / std::pow(2, i + 1);
+
+        std::vector<uint8_t> mipmapData(w * h * 4);
+
+        squish::DecompressImage(mipmapData.data(), w, h,
+                                file.m_mipmaps[i].data(), squish::kDxt5);
+
+        stbi_write_png(fmt::format("./dxt-dec-mip{}.png", i).c_str(), w, h, 4,
+                       mipmapData.data(), w * 4);
+    }
+
+    // For some more testing, write everything about the file to console
+    fmt::printf("%s\n", dds::fileToString(file));
 
     return nullptr;
+}
+
+std::shared_ptr<Image> decodeDst5(const std::vector<uint8_t>& data) {
+    // For testing reasons this just passes the data as if it was already DXT5
+    return decodeDxt5(data);
 }
 
 // Encoders

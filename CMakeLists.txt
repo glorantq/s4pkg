@@ -60,7 +60,8 @@ generate_export_header(s4pkg
 target_include_directories(s4pkg PUBLIC include ${CMAKE_BINARY_DIR})
 target_include_directories(s4pkg PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/vendor/stb"
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/libjpeg-turbo"
-    "${CMAKE_CURRENT_BINARY_DIR}/vendor/libjpeg-turbo")
+    "${CMAKE_CURRENT_BINARY_DIR}/vendor/libjpeg-turbo"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vendor/libsquish")
 
 set_target_properties(s4pkg PROPERTIES
         VERSION ${PROJECT_VERSION}
