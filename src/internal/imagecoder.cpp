@@ -328,6 +328,12 @@ std::shared_ptr<Image> decodeDst5(const std::vector<uint8_t>& data) {
         return nullptr;
     }
 
+    // Verify that this is in fact a DST5 compressed file
+    if (ddsFile.m_header.m_pixelFormat.m_fourCC !=
+        MAKE_FOURCC('D', 'S', 'T', '5')) {
+        return nullptr;
+    }
+
     // The raw blocks data as it would appear in the file
     std::vector<uint8_t> imageData = concatDdsImageData(ddsFile);
 
