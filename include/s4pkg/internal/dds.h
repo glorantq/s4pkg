@@ -31,6 +31,12 @@
      ((uint32_t)(uint8_t)(ch2) << 16) | ((uint32_t)(uint8_t)(ch3) << 24))
 #endif
 
+// Taken from
+// https://learn.microsoft.com/en-gb/windows/win32/direct3ddds/dds-file-layout-for-textures
+#define DDS_IMAGE_SIZE(w, h, bs)           \
+    std::max<uint32_t>(1, ((w + 3) / 4)) * \
+        std::max<uint32_t>(1, ((h + 3) / 4)) * bs
+
 namespace s4pkg::internal::dds {
 
 // For a detailed description of these structs and their members, see:

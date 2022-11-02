@@ -68,7 +68,7 @@ TEST_CASE("Test image coder", "data") {
     }
     thumbnailOut.close();
 
-    std::ifstream dstStream("./test-dxt5.dds", std::ios_base::binary);
+    std::ifstream dstStream("./dst5.dds", std::ios_base::binary);
     std::vector<uint8_t> dstContents(
         (std::istreambuf_iterator<char>(dstStream)),
         std::istreambuf_iterator<char>());

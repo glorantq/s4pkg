@@ -25,6 +25,7 @@
 
 #include <cmath>
 #include <optional>
+#include <tuple>
 #include <unordered_map>
 
 #include <stb_image.h>
@@ -221,57 +222,173 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
 // compressed textures; they are just stored differently in the package. We
 // first convert them back to DXT5, then delegate to this method for the actual
 // decoding.
-std::shared_ptr<Image> decodeDxt5(const std::vector<uint8_t>& data) {
-    membuf streamBuffer(data.data(), data.size());
-    std::istream stream(&streamBuffer, std::ios_base::binary);
-
-    // Try to read in the DDS file
-    dds::dds_file_t file{};
-    if (!dds::readFile(stream, file)) {
-        return nullptr;
-    }
-
+std::shared_ptr<Image> decodeDxt5(const dds::dds_file_t& ddsFile) {
     // Verify that it is indeed compressed as DXT5
-    if (file.m_header.m_pixelFormat.m_fourCC !=
+    if (ddsFile.m_header.m_pixelFormat.m_fourCC !=
         MAKE_FOURCC('D', 'X', 'T', '5')) {
         return nullptr;
     }
 
     // This is just for testing, decompress the main image, then the mipmaps,
     // and write all of them to disk as PNG (again, just testing)
-    std::vector<uint8_t> decompressedData(file.m_header.m_width *
-                                          file.m_header.m_height * 4);
+    std::vector<uint8_t> decompressedData(ddsFile.m_header.m_width *
+                                          ddsFile.m_header.m_height * 4);
 
-    squish::DecompressImage(decompressedData.data(), file.m_header.m_width,
-                            file.m_header.m_height, file.m_mainImage.data(),
-                            squish::kDxt5);
+    squish::DecompressImage(decompressedData.data(), ddsFile.m_header.m_width,
+                            ddsFile.m_header.m_height,
+                            ddsFile.m_mainImage.data(), squish::kDxt5);
 
-    stbi_write_png("./dxt-dec-main.png", file.m_header.m_width,
-                   file.m_header.m_height, 4, decompressedData.data(),
-                   file.m_header.m_width * 4);
+    stbi_write_png("./dxt-dec-main.png", ddsFile.m_header.m_width,
+                   ddsFile.m_header.m_height, 4, decompressedData.data(),
+                   ddsFile.m_header.m_width * 4);
 
-    for (int i = 0; i < file.m_mipmaps.size(); i++) {
-        uint32_t w = file.m_header.m_width / std::pow(2, i + 1);
-        uint32_t h = file.m_header.m_height / std::pow(2, i + 1);
+    for (int i = 0; i < ddsFile.m_mipmaps.size(); i++) {
+        uint32_t w = ddsFile.m_header.m_width / std::pow(2, i + 1);
+        uint32_t h = ddsFile.m_header.m_height / std::pow(2, i + 1);
 
         std::vector<uint8_t> mipmapData(w * h * 4);
 
         squish::DecompressImage(mipmapData.data(), w, h,
-                                file.m_mipmaps[i].data(), squish::kDxt5);
+                                ddsFile.m_mipmaps[i].data(), squish::kDxt5);
 
         stbi_write_png(fmt::format("./dxt-dec-mip{}.png", i).c_str(), w, h, 4,
                        mipmapData.data(), w * 4);
     }
 
     // For some more testing, write everything about the file to console
-    fmt::printf("%s\n", dds::fileToString(file));
+    fmt::printf("%s\n", dds::fileToString(ddsFile));
 
     return nullptr;
 }
 
+#define COPY_BYTES(from, to, pos, len, c) \
+    for (int _i = 0; _i < len; _i++) {    \
+        to[c++] = from[pos + _i];         \
+    }
+
+/**
+ * @brief Method to reconstruct the image data in a dds_file_t struct from raw
+ * block data. For more info on how this works, see the implementation of the
+ * DDS parser.
+ * @param ddsFile: the file to modify
+ * @param imageData: the raw block data
+ */
+void reconstructDdsImageData(dds::dds_file_t& ddsFile,
+                             const std::vector<uint8_t>& imageData) {
+    std::vector<std::vector<uint8_t>> reconstructedMipmaps(
+        ddsFile.m_header.m_mipMapCount - 1);
+
+    uint32_t mipmapCopyIdx = 0;
+    uint32_t width = ddsFile.m_header.m_width;
+    uint32_t height = ddsFile.m_header.m_height;
+
+    uint8_t blockSize = 16;
+    if (ddsFile.m_header.m_pixelFormat.m_fourCC ==
+        MAKE_FOURCC('D', 'X', 'T', '1')) {
+        blockSize = 8;
+    }
+
+    uint32_t mipmapPosition = DDS_IMAGE_SIZE(width, height, blockSize);
+
+    std::vector<uint8_t> reconstructedMainImage(mipmapPosition);
+    COPY_BYTES(imageData, reconstructedMainImage, 0,
+               reconstructedMainImage.size(), mipmapCopyIdx);
+    mipmapCopyIdx = 0;
+
+    for (int i = 0; i < reconstructedMipmaps.size(); i++) {
+        width /= 2;
+        height /= 2;
+
+        width = std::max<uint32_t>(1, width);
+        height = std::max<uint32_t>(1, height);
+
+        std::vector<uint8_t> mipmap(DDS_IMAGE_SIZE(width, height, blockSize));
+        COPY_BYTES(imageData, mipmap, mipmapPosition, mipmap.size(),
+                   mipmapCopyIdx);
+
+        mipmapCopyIdx = 0;
+        mipmapPosition += mipmap.size();
+
+        reconstructedMipmaps[i] = mipmap;
+    }
+
+    ddsFile.m_mainImage = reconstructedMainImage;
+    ddsFile.m_mipmaps = reconstructedMipmaps;
+}
+
+/**
+ * @brief Method to concatenate all block data into a single continous vector
+ * (like in the original file). For more info on how this works, see the
+ * implementation of the DDS parser.
+ * @param ddsFile: the file whose image data should be processed
+ * @return the raw block data
+ */
+std::vector<uint8_t> concatDdsImageData(dds::dds_file_t& ddsFile) {
+    uint32_t dataSize = ddsFile.m_mainImage.size();
+    for (const auto& mipmap : ddsFile.m_mipmaps) {
+        dataSize += mipmap.size();
+    }
+
+    uint32_t copyIdx = 0;
+    std::vector<uint8_t> imageData(dataSize);
+    COPY_BYTES(ddsFile.m_mainImage, imageData, 0, ddsFile.m_mainImage.size(),
+               copyIdx);
+
+    for (const auto& mipmap : ddsFile.m_mipmaps) {
+        COPY_BYTES(mipmap, imageData, 0, mipmap.size(), copyIdx);
+    }
+
+    return imageData;
+}
+
 std::shared_ptr<Image> decodeDst5(const std::vector<uint8_t>& data) {
-    // For testing reasons this just passes the data as if it was already DXT5
-    return decodeDxt5(data);
+    // Read in the DDS file from memory
+    membuf memoryBuffer(data.data(), data.size());
+    std::istream stream(&memoryBuffer);
+
+    dds::dds_file_t ddsFile{};
+
+    // Verify that we could read the file correctly
+    if (!dds::readFile(stream, ddsFile)) {
+        return nullptr;
+    }
+
+    // The raw blocks data as it would appear in the file
+    std::vector<uint8_t> imageData = concatDdsImageData(ddsFile);
+
+    // Vector to hold the unshuffled block data
+    std::vector<uint8_t> outputImage(imageData.size());
+
+    // Block offsets for unshuffling
+    uint32_t blockOffset0 = 0;
+    uint32_t blockOffset2 = blockOffset0 + (imageData.size() >> 3);
+    uint32_t blockOffset1 = blockOffset2 + (imageData.size() >> 2);
+    uint32_t blockOffset3 = blockOffset1 + (6 * imageData.size() >> 4);
+
+    // Count of all blocks in the image
+    uint32_t blockCount = (blockOffset2 - blockOffset0) / 2;
+
+    // Unshuffle the blocks
+    uint32_t writeIdx = 0;
+    for (int i = 0; i < blockCount; i++) {
+        COPY_BYTES(imageData, outputImage, blockOffset0, 2, writeIdx);
+        COPY_BYTES(imageData, outputImage, blockOffset1, 6, writeIdx);
+        COPY_BYTES(imageData, outputImage, blockOffset2, 4, writeIdx);
+        COPY_BYTES(imageData, outputImage, blockOffset3, 4, writeIdx);
+
+        blockOffset0 += 2;
+        blockOffset1 += 6;
+        blockOffset2 += 4;
+        blockOffset3 += 4;
+    }
+
+    // Reconstruct the image data in the dds_file_t structure
+    reconstructDdsImageData(ddsFile, outputImage);
+
+    // Set the file header to DXT5, the file is now decoded and can be read
+    ddsFile.m_header.m_pixelFormat.m_fourCC = MAKE_FOURCC('D', 'X', 'T', '5');
+
+    return decodeDxt5(ddsFile);
 }
 
 // Encoders

@@ -168,12 +168,6 @@ dds_header_t readHeader(std::istream& stream) {
     return header;
 }
 
-// Taken from
-// https://learn.microsoft.com/en-gb/windows/win32/direct3ddds/dds-file-layout-for-textures
-#define IMAGE_SIZE(w, h, bs)               \
-    std::max<uint32_t>(1, ((w + 3) / 4)) * \
-        std::max<uint32_t>(1, ((h + 3) / 4)) * bs
-
 bool readFile(std::istream& stream, dds_file_t& file) {
     uint8_t magicBytes[4];
     uint8_t expectedMagic[] = {'D', 'D', 'S', ' '};
@@ -210,7 +204,7 @@ bool readFile(std::istream& stream, dds_file_t& file) {
     uint32_t height = file.m_header.m_height;
 
     file.m_mainImage =
-        std::vector<uint8_t>(IMAGE_SIZE(width, height, blockSize));
+        std::vector<uint8_t>(DDS_IMAGE_SIZE(width, height, blockSize));
     streams::readBytes(stream, file.m_mainImage.data(),
                        file.m_mainImage.size());
 
@@ -226,7 +220,7 @@ bool readFile(std::istream& stream, dds_file_t& file) {
         width = std::max<uint32_t>(1, width);
         height = std::max<uint32_t>(1, height);
 
-        std::vector<uint8_t> mipmap(IMAGE_SIZE(width, height, blockSize));
+        std::vector<uint8_t> mipmap(DDS_IMAGE_SIZE(width, height, blockSize));
         streams::readBytes(stream, mipmap.data(), mipmap.size());
 
         file.m_mipmaps[i] = mipmap;
