@@ -76,6 +76,19 @@ TEST_CASE("Test image coder", "data") {
 
     auto decodedDst = s4pkg::internal::imagecoder::decode(
         dstContents, s4pkg::internal::imagecoder::DST5);
+
+    REQUIRE(decodedDst != nullptr);
+
+    std::cout << "Re-encoding DST5..." << std::endl;
+
+    std::vector<uint8_t> dstThumbnail = s4pkg::internal::imagecoder::encode(
+        *decodedDst, s4pkg::internal::imagecoder::DST5);
+
+    std::ofstream dstOut("./dst5_out.dds", std::ios_base::binary);
+    for (int i = 0; i < dstThumbnail.size(); i++) {
+        dstOut.write((const char*)&dstThumbnail[i], 1);
+    }
+    dstOut.close();
 }
 
 TEST_CASE("Test good in-memory package", "package") {

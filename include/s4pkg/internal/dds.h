@@ -37,6 +37,13 @@
     std::max<uint32_t>(1, ((w + 3) / 4)) * \
         std::max<uint32_t>(1, ((h + 3) / 4)) * bs
 
+#define COPY_BYTES(from, to, pos, len, c)  \
+    {                                      \
+        for (int _i = 0; _i < len; _i++) { \
+            to[c++] = from[pos + _i];      \
+        }                                  \
+    }
+
 namespace s4pkg::internal::dds {
 
 // For a detailed description of these structs and their members, see:
@@ -114,6 +121,8 @@ typedef struct dds_file_t {
  * @return whether the reading was successful or not
  */
 bool readFile(std::istream&, dds_file_t&);
+
+std::vector<uint8_t> writeFile(const dds_file_t&);
 
 std::string fileToString(const dds_file_t&);
 

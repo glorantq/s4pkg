@@ -44,3 +44,6 @@ static unsigned char* mz_stbi_zlib_compress(unsigned char* data,
 #define STBIW_ZLIB_COMPRESS mz_stbi_zlib_compress
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
+
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#include <stb_image_resize.h>

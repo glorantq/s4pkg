@@ -29,6 +29,7 @@
 #include <unordered_map>
 
 #include <stb_image.h>
+#include <stb_image_resize.h>
 #include <stb_image_write.h>
 
 #include <jpeglib.h>
@@ -229,8 +230,6 @@ std::shared_ptr<Image> decodeDxt5(const dds::dds_file_t& ddsFile) {
         return nullptr;
     }
 
-    // This is just for testing, decompress the main image, then the mipmaps,
-    // and write all of them to disk as PNG (again, just testing)
     std::vector<uint8_t> decompressedData(ddsFile.m_header.m_width *
                                           ddsFile.m_header.m_height * 4);
 
@@ -238,33 +237,9 @@ std::shared_ptr<Image> decodeDxt5(const dds::dds_file_t& ddsFile) {
                             ddsFile.m_header.m_height,
                             ddsFile.m_mainImage.data(), squish::kDxt5);
 
-    stbi_write_png("./dxt-dec-main.png", ddsFile.m_header.m_width,
-                   ddsFile.m_header.m_height, 4, decompressedData.data(),
-                   ddsFile.m_header.m_width * 4);
-
-    for (int i = 0; i < ddsFile.m_mipmaps.size(); i++) {
-        uint32_t w = ddsFile.m_header.m_width / std::pow(2, i + 1);
-        uint32_t h = ddsFile.m_header.m_height / std::pow(2, i + 1);
-
-        std::vector<uint8_t> mipmapData(w * h * 4);
-
-        squish::DecompressImage(mipmapData.data(), w, h,
-                                ddsFile.m_mipmaps[i].data(), squish::kDxt5);
-
-        stbi_write_png(fmt::format("./dxt-dec-mip{}.png", i).c_str(), w, h, 4,
-                       mipmapData.data(), w * 4);
-    }
-
-    // For some more testing, write everything about the file to console
-    fmt::printf("%s\n", dds::fileToString(ddsFile));
-
-    return nullptr;
+    return std::make_shared<Image>(ddsFile.m_header.m_width,
+                                   ddsFile.m_header.m_height, decompressedData);
 }
-
-#define COPY_BYTES(from, to, pos, len, c) \
-    for (int _i = 0; _i < len; _i++) {    \
-        to[c++] = from[pos + _i];         \
-    }
 
 /**
  * @brief Method to reconstruct the image data in a dds_file_t struct from raw
@@ -323,7 +298,7 @@ void reconstructDdsImageData(dds::dds_file_t& ddsFile,
  * @param ddsFile: the file whose image data should be processed
  * @return the raw block data
  */
-std::vector<uint8_t> concatDdsImageData(dds::dds_file_t& ddsFile) {
+std::vector<uint8_t> concatDdsImageData(const dds::dds_file_t& ddsFile) {
     uint32_t dataSize = ddsFile.m_mainImage.size();
     for (const auto& mipmap : ddsFile.m_mipmaps) {
         dataSize += mipmap.size();
@@ -520,6 +495,149 @@ std::vector<uint8_t> encodeJfifWithAlpha(const Image& image) {
     return finalData;
 }
 
+// Pretty self-explanatory code, we generate mip-maps down to 1x1 pixels, every
+// level is half of the previous
+std::vector<Image> generateMipMaps(const Image& image) {
+    std::vector<Image> mipmaps;
+
+    uint32_t width = image.getWidth();
+    uint32_t height = image.getHeight();
+
+    do {
+        width /= 2;
+        height /= 2;
+
+        width = std::max<uint32_t>(1, width);
+        height = std::max<uint32_t>(1, height);
+
+        std::vector<uint8_t> mipmapData(width * height * 4);
+        stbir_resize_uint8(image.getPixelData().data(), image.getWidth(),
+                           image.getHeight(), image.getWidth() * 4,
+                           mipmapData.data(), width, height, width * 4, 4);
+
+        Image mipmap{width, height, mipmapData};
+
+        mipmaps.push_back(mipmap);
+    } while (width != 1 || height != 1);
+
+    return mipmaps;
+}
+
+// Encode an image as DXT5, this is again, used by multiple resources in a
+// package that are compressed or encoded differently. Mip-maps are generated
+// automatically.
+dds::dds_file_t encodeDxt5(const Image& image) {
+    // Generate mip-maps and compress them
+    std::vector<Image> rawMipmaps = generateMipMaps(image);
+    std::vector<std::vector<uint8_t>> mipmaps(rawMipmaps.size());
+
+    for (int i = 0; i < rawMipmaps.size(); i++) {
+        const Image& mipmapData = rawMipmaps[i];
+        std::vector<uint8_t> encoded(
+            DDS_IMAGE_SIZE(mipmapData.getWidth(), mipmapData.getHeight(), 16));
+
+        squish::CompressImage(
+            mipmapData.getPixelData().data(), mipmapData.getWidth(),
+            mipmapData.getHeight(), encoded.data(),
+            squish::kDxt5 | squish::kColourIterativeClusterFit);
+
+        mipmaps[i] = encoded;
+    }
+
+    // Set up the DDS header with correct values
+
+    dds::dds_pixelformat_t pixelFormat{
+        32,                               // m_size
+        dds::DDPF_FOURCC,                 // m_flags
+        MAKE_FOURCC('D', 'X', 'T', '5'),  // m_fourCC
+        0,                                // m_rgbBitCount
+        0,                                // m_rBitMask
+        0,                                // m_gBitMask
+        0,                                // m_bBitMask
+        0                                 // m_aBitMask
+    };
+
+    dds::dds_header_t header{
+        124,  // m_size
+        dds::DDSD_HEIGHT | dds::DDSD_WIDTH | dds::DDSD_CAPS |
+            dds::DDSD_PIXELFORMAT | dds::DDSD_MIPMAPCOUNT,  // m_flags
+        image.getHeight(),
+        image.getWidth(),
+        0,                                  // m_pitchOrLinearSize
+        1,                                  // m_depth
+        1 + (uint32_t)mipmaps.size(),       // m_mipMapCount
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},  // m_reserved
+        pixelFormat,
+        dds::DDSCAPS_COMPLEX | dds::DDSCAPS_MIPMAP,  // m_caps,
+        0,                                           // m_caps2
+        0,                                           // m_caps3
+        0                                            // m_reserved2
+    };
+
+    // Compress the main image as well
+
+    std::vector<uint8_t> mainImage(
+        DDS_IMAGE_SIZE(image.getWidth(), image.getHeight(), 16));
+
+    squish::CompressImage(image.getPixelData().data(), image.getWidth(),
+                          image.getHeight(), mainImage.data(),
+                          squish::kDxt5 | squish::kColourIterativeClusterFit);
+
+    // Create the final DDS file
+    dds::dds_file_t ddsFile{header, mainImage, mipmaps};
+
+    return ddsFile;
+}
+
+std::vector<uint8_t> encodeDst5(const Image& image) {
+    dds::dds_file_t dxtFile = encodeDxt5(image);
+
+    std::vector<uint8_t> imageData = concatDdsImageData(dxtFile);
+
+    // Shuffle the blocks around
+    uint32_t blockCount = imageData.size() / 16;
+
+    std::vector<uint8_t> block0(blockCount * 2);
+    std::vector<uint8_t> block1(blockCount * 6);
+    std::vector<uint8_t> block2(blockCount * 4);
+    std::vector<uint8_t> block3(blockCount * 4);
+
+    uint32_t c0 = 0;
+    uint32_t c1 = 0;
+    uint32_t c2 = 0;
+    uint32_t c3 = 0;
+
+    uint32_t sourceIdx = 0;
+
+    for (int i = 0; i < blockCount; i++) {
+        COPY_BYTES(imageData, block0, sourceIdx, 2, c0);
+        sourceIdx += 2;
+
+        COPY_BYTES(imageData, block1, sourceIdx, 6, c1);
+        sourceIdx += 6;
+
+        COPY_BYTES(imageData, block2, sourceIdx, 4, c2);
+        sourceIdx += 4;
+
+        COPY_BYTES(imageData, block3, sourceIdx, 4, c3);
+        sourceIdx += 4;
+    }
+
+    std::vector<uint8_t> shuffledData(imageData.size());
+
+    uint32_t c = 0;
+    COPY_BYTES(block0, shuffledData, 0, c0, c);
+    COPY_BYTES(block2, shuffledData, 0, c2, c);
+    COPY_BYTES(block1, shuffledData, 0, c1, c);
+    COPY_BYTES(block3, shuffledData, 0, c3, c);
+
+    reconstructDdsImageData(dxtFile, shuffledData);
+
+    dxtFile.m_header.m_pixelFormat.m_fourCC = MAKE_FOURCC('D', 'S', 'T', '5');
+
+    return dds::writeFile(dxtFile);
+}
+
 // Implementation of the s4pkg::internal::imagecoder::(decode / encode)
 // functions, which just delegate to the actual implementations defined
 // above
@@ -534,7 +652,8 @@ const std::unordered_map<ImageFormat, t_decoderFunction> g_decoderMapping = {
     {DST5, &decodeDst5}};
 
 const std::unordered_map<ImageFormat, t_encoderFunction> g_encoderMapping = {
-    {JFIF_WITH_ALPHA, &encodeJfifWithAlpha}};
+    {JFIF_WITH_ALPHA, &encodeJfifWithAlpha},
+    {DST5, &encodeDst5}};
 
 template <typename T>
 T tryGetFunction(const std::unordered_map<ImageFormat, T>& mapping,

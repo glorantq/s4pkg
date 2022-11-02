@@ -20,12 +20,14 @@
 
 #include <s4pkg/internal/dds.h>
 
+#include <ostream>
 #include <vector>
 
 #include <fmt/core.h>
 #include <fmt/printf.h>
 #include <fmt/ranges.h>
 
+#include <s4pkg/internal/membuf.h>
 #include <s4pkg/internal/streams.h>
 
 namespace s4pkg::internal::dds {
@@ -227,6 +229,72 @@ bool readFile(std::istream& stream, dds_file_t& file) {
     }
 
     return true;
+}
+
+#define COPY_UINT32(value, to, c)        \
+    {                                    \
+        uint8_t _v[4];                   \
+        _v[3] = (value >> 24) & 0xFF;    \
+        _v[2] = (value >> 16) & 0xFF;    \
+        _v[1] = (value >> 8) & 0xFF;     \
+        _v[0] = value & 0xFF;            \
+        for (int _i = 0; _i < 4; _i++) { \
+            to[c++] = _v[_i];            \
+        }                                \
+    }
+
+// We're going for functionality over looks here
+std::vector<uint8_t> writeFile(const dds_file_t& file) {
+    uint8_t magicBytes[] = {'D', 'D', 'S', ' '};
+
+    uint32_t imageDataSize = file.m_mainImage.size();
+    for (const auto& mipmap : file.m_mipmaps) {
+        imageDataSize += mipmap.size();
+    }
+
+    uint32_t totalFileSize =
+        sizeof(magicBytes) + sizeof(dds_header_t) + imageDataSize;
+
+    std::vector<uint8_t> output(totalFileSize);
+
+    uint32_t c = 0;
+    COPY_BYTES(magicBytes, output, 0, 4, c);
+    COPY_UINT32(file.m_header.m_size, output, c);
+    COPY_UINT32(file.m_header.m_flags, output, c);
+    COPY_UINT32(file.m_header.m_height, output, c);
+    COPY_UINT32(file.m_header.m_width, output, c);
+    COPY_UINT32(file.m_header.m_pitchOrLinearSize, output, c);
+    COPY_UINT32(file.m_header.m_depth, output, c);
+    COPY_UINT32(file.m_header.m_mipMapCount, output, c);
+
+    for (int i = 0; i < 11; i++) {
+        COPY_UINT32(file.m_header.m_reserved[i], output, c);
+    }
+
+    {
+        COPY_UINT32(file.m_header.m_pixelFormat.m_size, output, c);
+        COPY_UINT32(file.m_header.m_pixelFormat.m_flags, output, c);
+        COPY_UINT32(file.m_header.m_pixelFormat.m_fourCC, output, c);
+        COPY_UINT32(file.m_header.m_pixelFormat.m_rgbBitCount, output, c);
+        COPY_UINT32(file.m_header.m_pixelFormat.m_rBitMask, output, c);
+        COPY_UINT32(file.m_header.m_pixelFormat.m_gBitMask, output, c);
+        COPY_UINT32(file.m_header.m_pixelFormat.m_bBitMask, output, c);
+        COPY_UINT32(file.m_header.m_pixelFormat.m_aBitMask, output, c);
+    }
+
+    COPY_UINT32(file.m_header.m_caps, output, c);
+    COPY_UINT32(file.m_header.m_caps2, output, c);
+    COPY_UINT32(file.m_header.m_caps3, output, c);
+    COPY_UINT32(file.m_header.m_caps4, output, c);
+    COPY_UINT32(file.m_header.m_reserved2, output, c);
+
+    COPY_BYTES(file.m_mainImage, output, 0, file.m_mainImage.size(), c);
+
+    for (const auto& mipmap : file.m_mipmaps) {
+        COPY_BYTES(mipmap, output, 0, mipmap.size(), c);
+    }
+
+    return output;
 }
 
 std::string fileToString(const dds_file_t& file) {
