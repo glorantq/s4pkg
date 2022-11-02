@@ -67,6 +67,15 @@ TEST_CASE("Test image coder", "data") {
         thumbnailOut.write((const char*)&encodedThumbnail[i], 1);
     }
     thumbnailOut.close();
+
+    std::ifstream dstStream("./test-dxt5.dds", std::ios_base::binary);
+    std::vector<uint8_t> dstContents(
+        (std::istreambuf_iterator<char>(dstStream)),
+        std::istreambuf_iterator<char>());
+    dstStream.close();
+
+    auto decodedDst = s4pkg::internal::imagecoder::decode(
+        dstContents, s4pkg::internal::imagecoder::DST5);
 }
 
 TEST_CASE("Test good in-memory package", "package") {

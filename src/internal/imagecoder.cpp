@@ -18,7 +18,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <s4pkg/internal/dds.h>
 #include <s4pkg/internal/imagecoder.h>
+#include <s4pkg/internal/membuf.h>
 
 #include <optional>
 #include <unordered_map>
@@ -27,6 +29,8 @@
 #include <stb_image_write.h>
 
 #include <jpeglib.h>
+
+#include <fmt/printf.h>
 
 namespace s4pkg::internal::imagecoder {
 
@@ -209,6 +213,16 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
     return std::make_shared<Image>(width, height, finalImage);
 }
 
+std::shared_ptr<Image> decodeDst5(const std::vector<uint8_t>& data) {
+    membuf streamBuffer(data.data(), data.size());
+    std::istream stream(&streamBuffer, std::ios_base::binary);
+
+    dds::dds_header_t header = dds::readHeader(stream);
+    fmt::printf("%s\n", dds::headerToString(header));
+
+    return nullptr;
+}
+
 // Encoders
 
 std::vector<uint8_t> encodeJfifWithAlpha(const Image& image) {
@@ -348,7 +362,8 @@ typedef std::shared_ptr<Image> (*t_decoderFunction)(
 typedef std::vector<uint8_t> (*t_encoderFunction)(const Image&);
 
 const std::unordered_map<ImageFormat, t_decoderFunction> g_decoderMapping = {
-    {JFIF_WITH_ALPHA, &decodeJfifWithAlpha}};
+    {JFIF_WITH_ALPHA, &decodeJfifWithAlpha},
+    {DST5, &decodeDst5}};
 
 const std::unordered_map<ImageFormat, t_encoderFunction> g_encoderMapping = {
     {JFIF_WITH_ALPHA, &encodeJfifWithAlpha}};
