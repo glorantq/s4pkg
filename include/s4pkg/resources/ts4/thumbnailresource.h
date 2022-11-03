@@ -21,30 +21,29 @@
 #pragma once
 
 #include <s4pkg/internal/export.h>
-#include <s4pkg/object.h>
-#include <s4pkg/resources/iresource.h>
+#include <s4pkg/resources/imageresource.h>
 
-#include <memory>
-#include <vector>
+namespace s4pkg::resources::ts4 {
 
-namespace s4pkg {
+class S4PKG_EXPORT ThumbnailResource : public IImageResource {
+   private:
+    std::shared_ptr<internal::Image> m_image;
 
-class S4PKG_EXPORT IResourceFactory : public Object {
    public:
-    virtual std::shared_ptr<IResource> create(
-        uint32_t type, /**< This is purely for fallback, to not break resources
-                          not understood (or cared about) this tool */
-        uint32_t instanceEx,
-        uint32_t instance,
-        uint32_t group,
-        const std::vector<uint8_t>&) const = 0;
+    ThumbnailResource(uint32_t instanceEx,
+                      uint32_t instance,
+                      uint32_t group,
+                      const std::vector<uint8_t>& data)
+        : IImageResource(instanceEx,
+                         instance,
+                         group,
+                         ResourceType::THUMBNAIL_IMAGE,
+                         internal::imagecoder::ImageFormat::JFIF_WITH_ALPHA,
+                         data) {}
 
-    std::shared_ptr<IResource> createBlank(uint32_t type,
-                                           uint32_t instanceEx,
-                                           uint32_t instance,
-                                           uint32_t group) {
-        return this->create(type, instanceEx, instance, group, {});
-    }
+    // Object interface
+   public:
+    const std::string toString() const override;
 };
 
-}  // namespace s4pkg
+}  // namespace s4pkg::resources::ts4

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 project(s4pkg
-        VERSION 0.0.1
+        VERSION 0.0.2
         DESCRIPTION "A C++ library for working with Sims 4 package files"
         HOMEPAGE_URL "glorantv.hu"
         LANGUAGES CXX)
@@ -35,7 +35,11 @@ set_target_properties(jpeg PROPERTIES
 set_target_properties(squish PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+    WINDOWS_EXPORT_ALL_SYMBOLS YES
+    C_VISIBILITY_PRESET       visible
+    CXX_VISIBILITY_PRESET     visible
+    VISIBILITY_INLINES_HIDDEN NO)
 
 file(GLOB_RECURSE LIB_HEADER_FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/*/*.h)
 add_library(s4pkg SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/package/impl/inmemorypackage.cpp
@@ -50,14 +54,17 @@ add_library(s4pkg SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/package/impl/inmemorypa
     ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/image.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/imagecoder.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/dds.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/imageresource.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ts4/thumbnailresource.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ts4/thumbnailresourcefactory.cpp
     ${LIB_HEADER_FILES})
 
 target_link_libraries(s4pkg PRIVATE fmt::fmt miniz jpeg squish)
 
 generate_export_header(s4pkg
-        EXPORT_FILE_NAME "${CMAKE_BINARY_DIR}/s4pkg/internal/export.h")
+        EXPORT_FILE_NAME "${CMAKE_CURRENT_BINARY_DIR}/s4pkg/internal/export.h")
 
-target_include_directories(s4pkg PUBLIC include ${CMAKE_BINARY_DIR})
+target_include_directories(s4pkg PUBLIC include ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(s4pkg PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/vendor/stb"
     "${CMAKE_CURRENT_SOURCE_DIR}/vendor/libjpeg-turbo"
     "${CMAKE_CURRENT_BINARY_DIR}/vendor/libjpeg-turbo"
@@ -69,6 +76,11 @@ set_target_properties(s4pkg PROPERTIES
         C_VISIBILITY_PRESET       hidden
         CXX_VISIBILITY_PRESET     hidden
         VISIBILITY_INLINES_HIDDEN YES)
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/version.h.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/s4pkg/version.h")
+
 
 file(GLOB_RECURSE TEST_HEADER_FILES ${CMAKE_CURRENT_SOURCE_DIR}/test/*.h
     ${CMAKE_CURRENT_SOURCE_DIR}/test/*.hpp)

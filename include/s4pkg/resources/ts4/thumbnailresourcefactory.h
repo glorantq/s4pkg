@@ -21,30 +21,23 @@
 #pragma once
 
 #include <s4pkg/internal/export.h>
-#include <s4pkg/object.h>
-#include <s4pkg/resources/iresource.h>
+#include <s4pkg/resources/iresourcefactory.h>
 
-#include <memory>
-#include <vector>
+namespace s4pkg::factories::ts4 {
 
-namespace s4pkg {
-
-class S4PKG_EXPORT IResourceFactory : public Object {
+class S4PKG_EXPORT ThumbnailResourceFactory : public IResourceFactory {
+    // IResourceFactory interface
    public:
-    virtual std::shared_ptr<IResource> create(
-        uint32_t type, /**< This is purely for fallback, to not break resources
-                          not understood (or cared about) this tool */
+    std::shared_ptr<IResource> create(
+        uint32_t type,
         uint32_t instanceEx,
         uint32_t instance,
         uint32_t group,
-        const std::vector<uint8_t>&) const = 0;
+        const std::vector<uint8_t>&) const override;
 
-    std::shared_ptr<IResource> createBlank(uint32_t type,
-                                           uint32_t instanceEx,
-                                           uint32_t instance,
-                                           uint32_t group) {
-        return this->create(type, instanceEx, instance, group, {});
-    }
+    // Object interface
+   public:
+    const std::string toString() const override;
 };
 
-}  // namespace s4pkg
+}  // namespace s4pkg::factories::ts4

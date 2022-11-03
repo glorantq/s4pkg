@@ -25,6 +25,7 @@
 #include <s4pkg/internal/imagecoder.h>
 #include <s4pkg/package/ipackage.h>
 #include <s4pkg/package/packages.h>
+#include <s4pkg/version.h>
 
 #include <fstream>
 #include <iostream>
@@ -34,6 +35,8 @@
 #include <stb_image_write.h>
 
 TEST_CASE("Test image coder", "data") {
+    std::cout << "Using s4pkg version " << S4PKG_VERSION << std::endl;
+
     std::ifstream thumbnailStream("./thumbnail.jfif", std::ios_base::binary);
     std::vector<uint8_t> fileContents(
         (std::istreambuf_iterator<char>(thumbnailStream)),
@@ -78,6 +81,8 @@ TEST_CASE("Test image coder", "data") {
         dstContents, s4pkg::internal::imagecoder::DST5);
 
     REQUIRE(decodedDst != nullptr);
+
+    std::cout << "Decoded DST5: " << decodedDst->toString() << std::endl;
 
     std::cout << "Re-encoding DST5..." << std::endl;
 

@@ -674,7 +674,7 @@ T tryGetFunction(const std::unordered_map<ImageFormat, T>& mapping,
 std::shared_ptr<Image> decode(const std::vector<uint8_t>& data,
                               ImageFormat format) {
     t_decoderFunction chosenDecoder = tryGetFunction(g_decoderMapping, format);
-    if (chosenDecoder != nullptr) {
+    if (chosenDecoder != nullptr && data.size() > 0) {
         return chosenDecoder(data);
     }
 
