@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include <s4pkg/internal/export.h>
 #include <s4pkg/package/enums.h>
 #include <s4pkg/resources/iresourcefactory.h>
 
@@ -31,7 +32,7 @@ extern const std::map<s4pkg::ResourceType,
                       std::shared_ptr<s4pkg::IResourceFactory>>
     g_resourceFactoryMapping;
 
-extern const std::shared_ptr<s4pkg::IResourceFactory> getResourceFactoryFor(
-    s4pkg::ResourceType);
+extern S4PKG_EXPORT const std::shared_ptr<s4pkg::IResourceFactory>
+    getResourceFactoryFor(s4pkg::ResourceType);
 
 };  // namespace s4pkg::internal::globals

@@ -26,9 +26,6 @@
 namespace s4pkg::resources::ts4 {
 
 class S4PKG_EXPORT ThumbnailResource : public IImageResource {
-   private:
-    std::shared_ptr<internal::Image> m_image;
-
    public:
     ThumbnailResource(uint32_t instanceEx,
                       uint32_t instance,
@@ -37,9 +34,10 @@ class S4PKG_EXPORT ThumbnailResource : public IImageResource {
         : IImageResource(instanceEx,
                          instance,
                          group,
-                         ResourceType::THUMBNAIL_IMAGE,
-                         internal::imagecoder::ImageFormat::JFIF_WITH_ALPHA,
-                         data) {}
+                         ResourceType::THUMBNAIL_IMAGE) {
+        setDataWithFormat(internal::imagecoder::ImageFormat::JFIF_WITH_ALPHA,
+                          data);
+    }
 
     // Object interface
    public:

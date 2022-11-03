@@ -18,29 +18,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include <s4pkg/resources/ts4/dstresource.h>
+#include <s4pkg/resources/ts4/dstresourcefactory.h>
 
-namespace s4pkg {
+namespace s4pkg::factories::ts4 {
 
-/**
- * @brief Type of a resource
- * @see https://forums.thesims.com/en_US/discussion/858947/maxis-info-index
- */
-enum ResourceType {
-    UNKNOWN = 0x0,
-    THUMBNAIL_IMAGE = 0x3C1AF1F2,
-    DST_IMAGE = 0x00B2D882
-};
+std::shared_ptr<s4pkg::IResource> DSTResourceFactory::create(
+    uint32_t type,
+    uint32_t instanceEx,
+    uint32_t instance,
+    uint32_t group,
+    const std::vector<uint8_t>& data) const {
+    return std::make_shared<resources::ts4::DSTResource>(instanceEx, instance,
+                                                         group, data);
+}
 
-/**
- * @brief CompressionType of a resource
- */
-enum CompressionType {
-    UNCOMPRESSED = 0x0000,
-    STREAMABLE = 0xfffe,
-    INTERNAL = 0xffff,
-    DELETED = 0xffe0,
-    ZLIB = 0x5a42
-};
+const std::string DSTResourceFactory::toString() const {
+    return "DSTResourceFactory []";
+}
 
-}  // namespace s4pkg
+}  // namespace s4pkg::factories::ts4

@@ -20,6 +20,7 @@
 
 #include <s4pkg/internal/globals.h>
 #include <s4pkg/resources/fallbackresourcefactory.h>
+#include <s4pkg/resources/ts4/dstresourcefactory.h>
 #include <s4pkg/resources/ts4/thumbnailresourcefactory.h>
 
 namespace s4pkg::internal::globals {
@@ -30,6 +31,8 @@ const std::map<s4pkg::ResourceType, std::shared_ptr<s4pkg::IResourceFactory>>
          std::make_shared<s4pkg::factories::FallbackResourceFactory>()},
         {s4pkg::ResourceType::THUMBNAIL_IMAGE,
          std::make_shared<s4pkg::factories::ts4::ThumbnailResourceFactory>()},
+        {s4pkg::ResourceType::DST_IMAGE,
+         std::make_shared<s4pkg::factories::ts4::DSTResourceFactory>()},
 };
 
 const std::shared_ptr<s4pkg::IResourceFactory> getResourceFactoryFor(

@@ -57,6 +57,8 @@ add_library(s4pkg SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/package/impl/inmemorypa
     ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/imageresource.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ts4/thumbnailresource.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ts4/thumbnailresourcefactory.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ts4/dstresource.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ts4/dstresourcefactory.cpp
     ${LIB_HEADER_FILES})
 
 target_link_libraries(s4pkg PRIVATE fmt::fmt miniz jpeg squish)

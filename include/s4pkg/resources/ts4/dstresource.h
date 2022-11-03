@@ -20,27 +20,27 @@
 
 #pragma once
 
-namespace s4pkg {
+#include <s4pkg/internal/export.h>
+#include <s4pkg/resources/imageresource.h>
 
-/**
- * @brief Type of a resource
- * @see https://forums.thesims.com/en_US/discussion/858947/maxis-info-index
- */
-enum ResourceType {
-    UNKNOWN = 0x0,
-    THUMBNAIL_IMAGE = 0x3C1AF1F2,
-    DST_IMAGE = 0x00B2D882
+namespace s4pkg::resources::ts4 {
+
+class S4PKG_EXPORT DSTResource : public IImageResource {
+   public:
+    DSTResource(uint32_t instanceEx,
+                uint32_t instance,
+                uint32_t group,
+                const std::vector<uint8_t>& data)
+        : IImageResource(instanceEx, instance, group, ResourceType::DST_IMAGE) {
+        setDataWithFormat(
+            internal::imagecoder::ImageFormat::DST5,  // TODO: Handle other DST
+                                                      // images
+            data);
+    }
+
+    // Object interface
+   public:
+    const std::string toString() const override;
 };
 
-/**
- * @brief CompressionType of a resource
- */
-enum CompressionType {
-    UNCOMPRESSED = 0x0000,
-    STREAMABLE = 0xfffe,
-    INTERNAL = 0xffff,
-    DELETED = 0xffe0,
-    ZLIB = 0x5a42
-};
-
-}  // namespace s4pkg
+}  // namespace s4pkg::resources::ts4

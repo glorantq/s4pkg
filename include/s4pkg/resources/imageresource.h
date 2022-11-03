@@ -38,13 +38,8 @@ class S4PKG_EXPORT IImageResource : public IResource {
     IImageResource(uint32_t instanceEx,
                    uint32_t instance,
                    uint32_t group,
-                   ResourceType resourceType,
-                   internal::imagecoder::ImageFormat format,
-                   const std::vector<uint8_t>& data)
-        : IResource(instanceEx, instance, group, resourceType),
-          m_format(format) {
-        m_image = internal::imagecoder::decode(data, format);
-    }
+                   ResourceType resourceType)
+        : IResource(instanceEx, instance, group, resourceType) {}
 
     uint32_t getWidth() const {
         if (m_image) {
@@ -68,6 +63,13 @@ class S4PKG_EXPORT IImageResource : public IResource {
         } else {
             return {};
         }
+    }
+
+   protected:
+    void setDataWithFormat(internal::imagecoder::ImageFormat format,
+                           const std::vector<uint8_t>& data) {
+        this->m_format = format;
+        this->m_image = internal::imagecoder::decode(data, format);
     }
 
     // IResource interface
