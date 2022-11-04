@@ -39,6 +39,10 @@ class S4PKG_EXPORT ThumbnailResource : public IImageResource {
                           data);
     }
 
+    // IResource interface
+   public:
+    std::string getFriendlyName() const override { return "Thumbnail Image"; }
+
     // Object interface
    public:
     const std::string toString() const override;

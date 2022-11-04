@@ -153,7 +153,8 @@ TEST_CASE("Test good in-memory package", "package") {
     }
 
     for (const auto& resource : package.m_package->getResources()) {
-        std::cout << "Resource: " << resource->toString() << std::endl;
+        std::cout << "Resource: " << resource->toString() << " ("
+                  << resource->getFriendlyName() << ")" << std::endl;
     }
 
     std::cout << package.m_package->toString() << std::endl;

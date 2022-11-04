@@ -38,6 +38,10 @@ class S4PKG_EXPORT DSTResource : public IImageResource {
             data);
     }
 
+    // IResource interface
+   public:
+    std::string getFriendlyName() const override { return "DST Image"; }
+
     // Object interface
    public:
     const std::string toString() const override;

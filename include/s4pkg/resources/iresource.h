@@ -52,6 +52,8 @@ class S4PKG_EXPORT IResource : public Object {
         return this->m_resourceType;
     }
     virtual std::vector<uint8_t> write() const = 0;
+
+    virtual std::string getFriendlyName() const = 0;
 };
 
 }  // namespace s4pkg

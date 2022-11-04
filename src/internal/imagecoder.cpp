@@ -86,7 +86,7 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
     jerr.emit_message = &libjpegEmitMessage;
 
     jpeg_create_decompress(&cinfo);
-    jpeg_mem_src(&cinfo, data.data(), data.size());
+    jpeg_mem_src(&cinfo, data.data(), (int)data.size());
 
     if (hasError) {
         jpeg_destroy_decompress(&cinfo);
@@ -128,7 +128,7 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
 
             alphaData = std::vector<uint8_t>(alphaImageLength);
 
-            for (int i = 0; i < alphaImageLength; i++) {
+            for (uint32_t i = 0; i < alphaImageLength; i++) {
                 alphaData.value()[i] =
                     currentMarker->data[8 + i];  // The image is stored after
                                                  // the identifier (4 bytes) and
@@ -162,7 +162,7 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
 
     while (cinfo.output_scanline < cinfo.output_height) {
         if (jpeg_read_scanlines(&cinfo, scanlineBuffer, 1) > 0) {
-            for (int i = 0; i < rowStride; i++) {
+            for (uint32_t i = 0; i < rowStride; i++) {
                 rgbImage[(cinfo.output_scanline - 1) * rowStride + i] =
                     scanlineBuffer[0][i];
             }
@@ -183,7 +183,7 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
     int alphaHeight = 0;
     int alphaChannelsInFile = 0;
     unsigned char* alphaImage = stbi_load_from_memory(
-        alphaData->data(), alphaData->size(), &alphaWidth, &alphaHeight,
+        alphaData->data(), (int)alphaData->size(), &alphaWidth, &alphaHeight,
         &alphaChannelsInFile,
         1);  // We only care about one component in this image, because R = G =
              // B, and this contains the alpha value (white fully opaque, black
@@ -282,7 +282,7 @@ void reconstructDdsImageData(dds::dds_file_t& ddsFile,
                    mipmapCopyIdx);
 
         mipmapCopyIdx = 0;
-        mipmapPosition += mipmap.size();
+        mipmapPosition += (uint32_t)mipmap.size();
 
         reconstructedMipmaps[i] = mipmap;
     }
@@ -299,9 +299,9 @@ void reconstructDdsImageData(dds::dds_file_t& ddsFile,
  * @return the raw block data
  */
 std::vector<uint8_t> concatDdsImageData(const dds::dds_file_t& ddsFile) {
-    uint32_t dataSize = ddsFile.m_mainImage.size();
+    uint32_t dataSize = (uint32_t)ddsFile.m_mainImage.size();
     for (const auto& mipmap : ddsFile.m_mipmaps) {
-        dataSize += mipmap.size();
+        dataSize += (uint32_t)mipmap.size();
     }
 
     uint32_t copyIdx = 0;
@@ -342,16 +342,17 @@ std::shared_ptr<Image> decodeDst5(const std::vector<uint8_t>& data) {
 
     // Block offsets for unshuffling
     uint32_t blockOffset0 = 0;
-    uint32_t blockOffset2 = blockOffset0 + (imageData.size() >> 3);
-    uint32_t blockOffset1 = blockOffset2 + (imageData.size() >> 2);
-    uint32_t blockOffset3 = blockOffset1 + (6 * imageData.size() >> 4);
+    uint32_t blockOffset2 = blockOffset0 + ((uint32_t)imageData.size() >> 3);
+    uint32_t blockOffset1 = blockOffset2 + ((uint32_t)imageData.size() >> 2);
+    uint32_t blockOffset3 =
+        blockOffset1 + (6 * (uint32_t)imageData.size() >> 4);
 
     // Count of all blocks in the image
     uint32_t blockCount = (blockOffset2 - blockOffset0) / 2;
 
     // Unshuffle the blocks
     uint32_t writeIdx = 0;
-    for (int i = 0; i < blockCount; i++) {
+    for (uint32_t i = 0; i < blockCount; i++) {
         COPY_BYTES(imageData, outputImage, blockOffset0, 2, writeIdx);
         COPY_BYTES(imageData, outputImage, blockOffset1, 6, writeIdx);
         COPY_BYTES(imageData, outputImage, blockOffset2, 4, writeIdx);
@@ -381,7 +382,7 @@ std::vector<uint8_t> encodeJfifWithAlpha(const Image& image) {
 
     // Separate the original image into an RGB array that will be JPEG
     // compressed, and an alpha array that will be saved as a greyscale PNG
-    for (int i = 0; i < image.getWidth() * image.getHeight(); i++) {
+    for (uint32_t i = 0; i < image.getWidth() * image.getHeight(); i++) {
         rgbData[i * 3] = image.getPixelData()[i * 4];
         rgbData[i * 3 + 1] = image.getPixelData()[i * 4 + 1];
         rgbData[i * 3 + 2] = image.getPixelData()[i * 4 + 2];
@@ -460,7 +461,7 @@ std::vector<uint8_t> encodeJfifWithAlpha(const Image& image) {
 
     // Write the alpha segment into the JPEG header
     jpeg_write_marker(&cinfo, JPEG_APP0, alphaApp0Segment.data(),
-                      alphaApp0Segment.size());
+                      (unsigned int)alphaApp0Segment.size());
 
     uint32_t rowStride = image.getWidth() * 3;
 
@@ -490,7 +491,7 @@ std::vector<uint8_t> encodeJfifWithAlpha(const Image& image) {
 
     // Copy the final image bytes into a vector for returning
     std::vector<uint8_t> finalData(jpegBufferSize);
-    for (int i = 0; i < jpegBufferSize; i++) {
+    for (uint32_t i = 0; i < jpegBufferSize; i++) {
         finalData[i] = jpegBuffer[i];
     }
 
@@ -601,7 +602,7 @@ std::vector<uint8_t> encodeDst5(const Image& image) {
     std::vector<uint8_t> imageData = concatDdsImageData(dxtFile);
 
     // Shuffle the blocks around
-    uint32_t blockCount = imageData.size() / 16;
+    uint32_t blockCount = (uint32_t)imageData.size() / 16;
 
     std::vector<uint8_t> block0(blockCount * 2);
     std::vector<uint8_t> block1(blockCount * 6);
@@ -615,7 +616,7 @@ std::vector<uint8_t> encodeDst5(const Image& image) {
 
     uint32_t sourceIdx = 0;
 
-    for (int i = 0; i < blockCount; i++) {
+    for (uint32_t i = 0; i < blockCount; i++) {
         COPY_BYTES(imageData, block0, sourceIdx, 2, c0);
         sourceIdx += 2;
 

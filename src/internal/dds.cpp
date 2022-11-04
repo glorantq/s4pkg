@@ -208,7 +208,7 @@ bool readFile(std::istream& stream, dds_file_t& file) {
     file.m_mainImage =
         std::vector<uint8_t>(DDS_IMAGE_SIZE(width, height, blockSize));
     streams::readBytes(stream, file.m_mainImage.data(),
-                       file.m_mainImage.size());
+                       (int)file.m_mainImage.size());
 
     // Then make room for the mipmaps
     file.m_mipmaps =
@@ -223,7 +223,7 @@ bool readFile(std::istream& stream, dds_file_t& file) {
         height = std::max<uint32_t>(1, height);
 
         std::vector<uint8_t> mipmap(DDS_IMAGE_SIZE(width, height, blockSize));
-        streams::readBytes(stream, mipmap.data(), mipmap.size());
+        streams::readBytes(stream, mipmap.data(), (int)mipmap.size());
 
         file.m_mipmaps[i] = mipmap;
     }
@@ -247,9 +247,9 @@ bool readFile(std::istream& stream, dds_file_t& file) {
 std::vector<uint8_t> writeFile(const dds_file_t& file) {
     uint8_t magicBytes[] = {'D', 'D', 'S', ' '};
 
-    uint32_t imageDataSize = file.m_mainImage.size();
+    uint32_t imageDataSize = (uint32_t)file.m_mainImage.size();
     for (const auto& mipmap : file.m_mipmaps) {
-        imageDataSize += mipmap.size();
+        imageDataSize += (uint32_t)mipmap.size();
     }
 
     uint32_t totalFileSize =

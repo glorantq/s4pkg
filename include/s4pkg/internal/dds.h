@@ -37,11 +37,11 @@
     std::max<uint32_t>(1, ((w + 3) / 4)) * \
         std::max<uint32_t>(1, ((h + 3) / 4)) * bs
 
-#define COPY_BYTES(from, to, pos, len, c)  \
-    {                                      \
-        for (int _i = 0; _i < len; _i++) { \
-            to[c++] = from[pos + _i];      \
-        }                                  \
+#define COPY_BYTES(from, to, pos, len, c)       \
+    {                                           \
+        for (uint32_t _i = 0; _i < len; _i++) { \
+            to[c++] = from[pos + _i];           \
+        }                                       \
     }
 
 namespace s4pkg::internal::dds {

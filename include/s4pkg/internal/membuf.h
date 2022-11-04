@@ -44,7 +44,7 @@ struct membuf : std::streambuf {
         std::ios_base::seekdir dir,
         std::ios_base::openmode which = std::ios_base::in) override {
         if (dir == std::ios_base::cur) {
-            gbump(off);
+            gbump((int)off);
         } else if (dir == std::ios_base::end) {
             setg((char*)m_begin, (char*)m_begin + m_size + off,
                  (char*)m_begin + m_size);

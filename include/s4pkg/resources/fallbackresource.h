@@ -45,6 +45,8 @@ class S4PKG_EXPORT FallbackResource : public IResource {
    public:
     std::vector<uint8_t> write() const override;
 
+    std::string getFriendlyName() const override { return "Unknown"; }
+
     // Object interface
    public:
     const std::string toString() const override;
