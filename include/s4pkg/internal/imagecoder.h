@@ -34,7 +34,7 @@ namespace s4pkg::internal::imagecoder {
  * @brief Formats of images we can convert from/to. Not all might be implemented
  * just yet.
  */
-enum ImageFormat { DST5, JFIF_WITH_ALPHA };
+enum ImageFormat { DST5, JFIF_WITH_ALPHA, DXT5 };
 
 /**
  * @brief Decodes an image into RGBA pixels

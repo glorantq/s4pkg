@@ -37,6 +37,12 @@ class S4PKG_EXPORT Object {
      * @return readable state of this object
      */
     virtual const std::string toString() const = 0;
+
+    bool operator==(const Object& obj) const { return equals(&obj); }
+
+    virtual bool equals(const Object* other) const {
+        return other != nullptr && this == other;
+    }
 };
 
 }  // namespace s4pkg

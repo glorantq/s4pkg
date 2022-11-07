@@ -114,11 +114,10 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
             // The size of the embedded PNG image. This should be the same as
             // currentMarker->data_length - 8 (identifier + 32-bit integer for
             // length)
-            uint32_t alphaImageLength =
-                ((currentMarker->data[4] << 24) & 0xFF) |
-                ((currentMarker->data[5] << 16) & 0xFF) |
-                ((currentMarker->data[6] << 8) & 0xFF) |
-                (currentMarker->data[7] & 0xFF);
+            uint32_t alphaImageLength = (currentMarker->data[4] << 24) |
+                                        (currentMarker->data[5] << 16) |
+                                        (currentMarker->data[6] << 8) |
+                                        (currentMarker->data[7] & 0xFF);
 
             if (alphaImageLength !=
                 currentMarker->data_length - 8) {  // Some sanity-checking
@@ -216,14 +215,15 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
 
     stbi_image_free(alphaImage);
 
-    return std::make_shared<Image>(width, height, finalImage);
+    return std::make_shared<Image>(width, height, finalImage,
+                                   "JPEG with Alpha");
 }
 
 // This is split into a separate method because more than one resource uses DXT5
 // compressed textures; they are just stored differently in the package. We
 // first convert them back to DXT5, then delegate to this method for the actual
 // decoding.
-std::shared_ptr<Image> decodeDxt5(const dds::dds_file_t& ddsFile) {
+std::shared_ptr<Image> decodeDxt5Internal(const dds::dds_file_t& ddsFile) {
     // Verify that it is indeed compressed as DXT5
     if (ddsFile.m_header.m_pixelFormat.m_fourCC !=
         MAKE_FOURCC('D', 'X', 'T', '5')) {
@@ -238,7 +238,8 @@ std::shared_ptr<Image> decodeDxt5(const dds::dds_file_t& ddsFile) {
                             ddsFile.m_mainImage.data(), squish::kDxt5);
 
     return std::make_shared<Image>(ddsFile.m_header.m_width,
-                                   ddsFile.m_header.m_height, decompressedData);
+                                   ddsFile.m_header.m_height, decompressedData,
+                                   "DXT5");
 }
 
 /**
@@ -370,7 +371,31 @@ std::shared_ptr<Image> decodeDst5(const std::vector<uint8_t>& data) {
     // Set the file header to DXT5, the file is now decoded and can be read
     ddsFile.m_header.m_pixelFormat.m_fourCC = MAKE_FOURCC('D', 'X', 'T', '5');
 
-    return decodeDxt5(ddsFile);
+    auto decoded = decodeDxt5Internal(ddsFile);
+    decoded->setFormatString("DST5");
+
+    return decoded;
+}
+
+std::shared_ptr<Image> decodeDxt5(const std::vector<uint8_t>& data) {
+    // Read in the DDS file from memory
+    membuf memoryBuffer(data.data(), data.size());
+    std::istream stream(&memoryBuffer);
+
+    dds::dds_file_t ddsFile{};
+
+    // Verify that we could read the file correctly
+    if (!dds::readFile(stream, ddsFile)) {
+        return nullptr;
+    }
+
+    // Verify that this is in fact a DXT5 compressed file
+    if (ddsFile.m_header.m_pixelFormat.m_fourCC !=
+        MAKE_FOURCC('D', 'X', 'T', '5')) {
+        return nullptr;
+    }
+
+    return decodeDxt5Internal(ddsFile);
 }
 
 // Encoders
@@ -522,7 +547,7 @@ std::vector<Image> generateMipMaps(const Image& image) {
                            image.getHeight(), image.getWidth() * 4,
                            mipmapData.data(), width, height, width * 4, 4);
 
-        Image mipmap{width, height, mipmapData};
+        Image mipmap{width, height, mipmapData, "RAW"};
 
         mipmaps.push_back(mipmap);
     } while (width != 1 || height != 1);
@@ -533,7 +558,7 @@ std::vector<Image> generateMipMaps(const Image& image) {
 // Encode an image as DXT5, this is again, used by multiple resources in a
 // package that are compressed or encoded differently. Mip-maps are generated
 // automatically.
-dds::dds_file_t encodeDxt5(const Image& image) {
+dds::dds_file_t encodeDxt5Internal(const Image& image) {
     // Generate mip-maps and compress them
     std::vector<Image> rawMipmaps = generateMipMaps(image);
     std::vector<std::vector<uint8_t>> mipmaps(rawMipmaps.size());
@@ -597,7 +622,7 @@ dds::dds_file_t encodeDxt5(const Image& image) {
 }
 
 std::vector<uint8_t> encodeDst5(const Image& image) {
-    dds::dds_file_t dxtFile = encodeDxt5(image);
+    dds::dds_file_t dxtFile = encodeDxt5Internal(image);
 
     std::vector<uint8_t> imageData = concatDdsImageData(dxtFile);
 
@@ -645,6 +670,12 @@ std::vector<uint8_t> encodeDst5(const Image& image) {
     return dds::writeFile(dxtFile);
 }
 
+std::vector<uint8_t> encodeDxt5(const Image& image) {
+    dds::dds_file_t dxtFile = encodeDxt5Internal(image);
+
+    return dds::writeFile(dxtFile);
+}
+
 // Implementation of the s4pkg::internal::imagecoder::(decode / encode)
 // functions, which just delegate to the actual implementations defined
 // above
@@ -656,11 +687,13 @@ typedef std::vector<uint8_t> (*t_encoderFunction)(const Image&);
 
 const std::unordered_map<ImageFormat, t_decoderFunction> g_decoderMapping = {
     {JFIF_WITH_ALPHA, &decodeJfifWithAlpha},
-    {DST5, &decodeDst5}};
+    {DST5, &decodeDst5},
+    {DXT5, &decodeDxt5}};
 
 const std::unordered_map<ImageFormat, t_encoderFunction> g_encoderMapping = {
     {JFIF_WITH_ALPHA, &encodeJfifWithAlpha},
-    {DST5, &encodeDst5}};
+    {DST5, &encodeDst5},
+    {DXT5, &encodeDxt5}};
 
 template <typename T>
 T tryGetFunction(const std::unordered_map<ImageFormat, T>& mapping,

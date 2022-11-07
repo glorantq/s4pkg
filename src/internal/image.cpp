@@ -25,8 +25,8 @@
 namespace s4pkg::internal {
 
 const std::string Image::toString() const {
-    return fmt::format("Image [ width={}, height={} ]", this->m_width,
-                       this->m_height);
+    return fmt::format("Image [ width={}, height={}, format={} ]",
+                       this->m_width, this->m_height, this->m_formatString);
 }
 
 }  // namespace s4pkg::internal

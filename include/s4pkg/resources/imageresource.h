@@ -65,6 +65,14 @@ class S4PKG_EXPORT IImageResource : public IResource {
         }
     }
 
+    const std::string getFormatString() const {
+        if (m_image) {
+            return m_image->getFormatString();
+        } else {
+            return "Unknown";
+        }
+    }
+
    protected:
     void setDataWithFormat(internal::imagecoder::ImageFormat format,
                            const std::vector<uint8_t>& data) {

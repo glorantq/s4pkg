@@ -52,6 +52,8 @@ class InMemoryPackage : public s4pkg::IPackage {
 
     // s4pkg::IPackage interface
    public:
+    bool deleteResource(const std::shared_ptr<const IResource>) override;
+
     bool isValid() const override;
 
     const PackageVersion getFileVersion() const override;

@@ -100,6 +100,27 @@ internal::InMemoryPackage::InMemoryPackage(std::istream& stream) {
                            // the time being, this is fine™
 }
 
+bool internal::InMemoryPackage::deleteResource(
+    const std::shared_ptr<const IResource> resource) {
+    if (!resource) {
+        return false;
+    }
+
+    for (auto it = this->m_resources.begin(); it != this->m_resources.end();) {
+        if (it->get() != nullptr && resource->equals(it->get())) {
+            this->m_resources.erase(it);
+            this->m_packageHeader.m_updatedTime =
+                PackageTime{std::chrono::system_clock::now()}.toTimestamp();
+
+            return true;
+        }
+
+        it++;
+    }
+
+    return false;
+}
+
 bool internal::InMemoryPackage::isValid() const {
     return this->m_valid;
 }

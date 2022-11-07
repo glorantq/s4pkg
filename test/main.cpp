@@ -139,6 +139,7 @@ TEST_CASE("Test good in-memory package", "package") {
     std::cout << "Package flags: " << flags.toString() << std::endl;
 
     std::vector<s4pkg::IndexEntry> index = package.m_package->getPackageIndex();
+
     REQUIRE(index.size() == 7);
     REQUIRE(index[0].m_type == (s4pkg::ResourceType)0x34AEECB);
     REQUIRE(index[4].m_group == 0x2);
@@ -152,10 +153,22 @@ TEST_CASE("Test good in-memory package", "package") {
         std::cout << "Entry: " << entry.toString() << std::endl;
     }
 
-    for (const auto& resource : package.m_package->getResources()) {
+    for (auto& resource : package.m_package->getResources()) {
         std::cout << "Resource: " << resource->toString() << " ("
                   << resource->getFriendlyName() << ")" << std::endl;
     }
+
+    /*std::shared_ptr<s4pkg::IResource> lastResource =
+        *(package.m_package->getResources().end() - 1);
+
+    size_t sizeBefore = package.m_package->getResources().size();
+    REQUIRE(package.m_package->deleteResource(lastResource));
+    REQUIRE(package.m_package->getResources().size() == sizeBefore - 1);
+
+    for (auto& resource : package.m_package->getResources()) {
+        std::cout << "Resource: " << resource->toString() << " ("
+                  << resource->getFriendlyName() << ")" << std::endl;
+    } */
 
     std::cout << package.m_package->toString() << std::endl;
 

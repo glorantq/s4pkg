@@ -308,7 +308,7 @@ void writeBytes(std::ostream& stream, const uint8_t* buffer, int size) {
             "Unexpected stream failure! Tried writing {} bytes.", size));
     }
 
-    if (buffer == nullptr) {
+    if (buffer == nullptr && size > 0) {
         throw PackageException("Buffer to be written is nullptr!");
     }
 

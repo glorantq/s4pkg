@@ -20,8 +20,14 @@
 
 #pragma once
 
+#include <s4pkg/internal/dds.h>
 #include <s4pkg/internal/export.h>
+#include <s4pkg/internal/membuf.h>
 #include <s4pkg/resources/imageresource.h>
+
+#include <istream>
+
+#include <fmt/printf.h>
 
 namespace s4pkg::resources::ts4 {
 
@@ -32,10 +38,29 @@ class S4PKG_EXPORT DSTResource : public IImageResource {
                 uint32_t group,
                 const std::vector<uint8_t>& data)
         : IImageResource(instanceEx, instance, group, ResourceType::DST_IMAGE) {
-        setDataWithFormat(
-            internal::imagecoder::ImageFormat::DST5,  // TODO: Handle other DST
-                                                      // images
-            data);
+        // Read in the DDS file from memory
+        internal::membuf memoryBuffer(data.data(), data.size());
+        std::istream stream(&memoryBuffer);
+
+        // Skip past the magic bytes, we just want to guess here, if the format
+        // we guess here is incorrect the proper error-checking in the image
+        // coder will catch it
+        stream.seekg(4);
+
+        internal::dds::dds_header_t ddsHeader =
+            internal::dds::readHeader(stream);
+
+        auto imageFormat = internal::imagecoder::DST5;
+
+        if (ddsHeader.m_pixelFormat.m_fourCC ==
+            MAKE_FOURCC('D', 'S', 'T', '5')) {
+            imageFormat = internal::imagecoder::DST5;
+        } else if (ddsHeader.m_pixelFormat.m_fourCC ==
+                   MAKE_FOURCC('D', 'X', 'T', '5')) {
+            imageFormat = internal::imagecoder::DXT5;
+        }
+
+        setDataWithFormat(imageFormat, data);
     }
 
     // IResource interface

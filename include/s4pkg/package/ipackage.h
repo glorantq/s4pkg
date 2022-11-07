@@ -37,6 +37,10 @@ class S4PKG_EXPORT IPackage : public Object {
    public:
     virtual bool isValid() const = 0;
 
+    // Methods for modification
+
+    virtual bool deleteResource(const std::shared_ptr<const IResource>) = 0;
+
     // Getters
 
     virtual const PackageVersion getFileVersion() const = 0;
