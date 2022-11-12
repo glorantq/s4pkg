@@ -35,26 +35,16 @@ class S4PKG_EXPORT Image : public Object {
     std::vector<uint8_t> m_pixelData;
     uint32_t m_width;
     uint32_t m_height;
-    std::string m_formatString;
 
    public:
-    Image(uint32_t width,
-          uint32_t height,
-          std::vector<uint8_t> pixelData,
-          std::string formatString)
-        : m_pixelData(pixelData),
-          m_width(width),
-          m_height(height),
-          m_formatString(formatString) {}
+    Image(uint32_t width, uint32_t height, std::vector<uint8_t> pixelData)
+        : m_pixelData(pixelData), m_width(width), m_height(height) {}
 
     const uint32_t getWidth() const { return this->m_width; }
     const uint32_t getHeight() const { return this->m_height; }
     const std::vector<uint8_t> getPixelData() const {
         return this->m_pixelData;
     }
-    const std::string getFormatString() const { return this->m_formatString; }
-
-    void setFormatString(std::string format) { this->m_formatString = format; }
 
     // Object interface
    public:

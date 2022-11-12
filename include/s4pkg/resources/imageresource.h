@@ -23,6 +23,7 @@
 #include <s4pkg/internal/export.h>
 #include <s4pkg/internal/image.h>
 #include <s4pkg/internal/imagecoder.h>
+#include <s4pkg/packageexception.h>
 #include <s4pkg/resources/iresource.h>
 
 #include <memory>
@@ -65,12 +66,8 @@ class S4PKG_EXPORT IImageResource : public IResource {
         }
     }
 
-    const std::string getFormatString() const {
-        if (m_image) {
-            return m_image->getFormatString();
-        } else {
-            return "Unknown";
-        }
+    const internal::imagecoder::ImageFormat getFormat() const {
+        return this->m_format;
     }
 
    protected:

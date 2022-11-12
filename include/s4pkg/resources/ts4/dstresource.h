@@ -38,6 +38,12 @@ class S4PKG_EXPORT DSTResource : public IImageResource {
                 uint32_t group,
                 const std::vector<uint8_t>& data)
         : IImageResource(instanceEx, instance, group, ResourceType::DST_IMAGE) {
+        // Provide a way to make an empty image
+        if (data.size() < sizeof(internal::dds::dds_header_t)) {
+            setDataWithFormat(internal::imagecoder::DST5, data);
+            return;
+        }
+
         // Read in the DDS file from memory
         internal::membuf memoryBuffer(data.data(), data.size());
         std::istream stream(&memoryBuffer);
@@ -58,6 +64,22 @@ class S4PKG_EXPORT DSTResource : public IImageResource {
         } else if (ddsHeader.m_pixelFormat.m_fourCC ==
                    MAKE_FOURCC('D', 'X', 'T', '5')) {
             imageFormat = internal::imagecoder::DXT5;
+        } else if (ddsHeader.m_pixelFormat.m_fourCC ==
+                   MAKE_FOURCC('D', 'X', 'T', '1')) {
+            imageFormat = internal::imagecoder::DXT1;
+        } else if (ddsHeader.m_pixelFormat.m_fourCC ==
+                   MAKE_FOURCC('D', 'S', 'T', '1')) {
+            imageFormat = internal::imagecoder::DST1;
+        } else if (ddsHeader.m_pixelFormat.m_fourCC ==
+                   MAKE_FOURCC('D', 'X', 'T', '3')) {
+            imageFormat = internal::imagecoder::DXT3;
+        } else if ((ddsHeader.m_pixelFormat.m_flags &
+                    internal::dds::DDPF_RGB) != 0) {
+            imageFormat = internal::imagecoder::DDS_UNCOMPRESSED;
+        } else {
+            fmt::printf(
+                "Unknown pixel format: %s\n",
+                internal::dds::pixelFormatToString(ddsHeader.m_pixelFormat));
         }
 
         setDataWithFormat(imageFormat, data);
@@ -65,7 +87,7 @@ class S4PKG_EXPORT DSTResource : public IImageResource {
 
     // IResource interface
    public:
-    std::string getFriendlyName() const override { return "DST Image"; }
+    std::string getFriendlyName() const override { return "DST/DXT Image"; }
 
     // Object interface
    public:

@@ -35,10 +35,9 @@ const std::map<s4pkg::ResourceType, std::shared_ptr<s4pkg::IResourceFactory>>
          std::make_shared<s4pkg::factories::ts4::DSTResourceFactory>()},
 };
 
-const std::shared_ptr<s4pkg::IResourceFactory> getResourceFactoryFor(
-    s4pkg::ResourceType type) {
+const s4pkg::IResourceFactory* getResourceFactoryFor(s4pkg::ResourceType type) {
     if (g_resourceFactoryMapping.find(type) != g_resourceFactoryMapping.end()) {
-        return g_resourceFactoryMapping.at(type);
+        return g_resourceFactoryMapping.at(type).get();
     } else {
         if (type == s4pkg::ResourceType::UNKNOWN) {
             return nullptr;

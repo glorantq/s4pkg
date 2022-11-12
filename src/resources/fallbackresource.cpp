@@ -29,7 +29,8 @@ std::vector<uint8_t> FallbackResource::write() const {
 }
 
 const std::string FallbackResource::toString() const {
-    return fmt::format("FallbackResource [ size={} ]", this->m_data.size());
+    return fmt::format("FallbackResource [ size={}, type={:#x} ]",
+                       this->m_data.size(), this->getResourceType());
 }
 
 }  // namespace s4pkg::resources

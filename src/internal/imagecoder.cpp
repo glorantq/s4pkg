@@ -215,8 +215,7 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
 
     stbi_image_free(alphaImage);
 
-    return std::make_shared<Image>(width, height, finalImage,
-                                   "JPEG with Alpha");
+    return std::make_shared<Image>(width, height, finalImage);
 }
 
 // This is split into a separate method because more than one resource uses DXT5
@@ -238,8 +237,25 @@ std::shared_ptr<Image> decodeDxt5Internal(const dds::dds_file_t& ddsFile) {
                             ddsFile.m_mainImage.data(), squish::kDxt5);
 
     return std::make_shared<Image>(ddsFile.m_header.m_width,
-                                   ddsFile.m_header.m_height, decompressedData,
-                                   "DXT5");
+                                   ddsFile.m_header.m_height, decompressedData);
+}
+
+std::shared_ptr<Image> decodeDxt1Internal(const dds::dds_file_t& ddsFile) {
+    // Verify that it is indeed compressed as DXT1
+    if (ddsFile.m_header.m_pixelFormat.m_fourCC !=
+        MAKE_FOURCC('D', 'X', 'T', '1')) {
+        return nullptr;
+    }
+
+    std::vector<uint8_t> decompressedData(ddsFile.m_header.m_width *
+                                          ddsFile.m_header.m_height * 4);
+
+    squish::DecompressImage(decompressedData.data(), ddsFile.m_header.m_width,
+                            ddsFile.m_header.m_height,
+                            ddsFile.m_mainImage.data(), squish::kDxt1);
+
+    return std::make_shared<Image>(ddsFile.m_header.m_width,
+                                   ddsFile.m_header.m_height, decompressedData);
 }
 
 /**
@@ -252,7 +268,7 @@ std::shared_ptr<Image> decodeDxt5Internal(const dds::dds_file_t& ddsFile) {
 void reconstructDdsImageData(dds::dds_file_t& ddsFile,
                              const std::vector<uint8_t>& imageData) {
     std::vector<std::vector<uint8_t>> reconstructedMipmaps(
-        ddsFile.m_header.m_mipMapCount - 1);
+        std::max<int32_t>(0, ddsFile.m_header.m_mipMapCount - 1));
 
     uint32_t mipmapCopyIdx = 0;
     uint32_t width = ddsFile.m_header.m_width;
@@ -260,7 +276,9 @@ void reconstructDdsImageData(dds::dds_file_t& ddsFile,
 
     uint8_t blockSize = 16;
     if (ddsFile.m_header.m_pixelFormat.m_fourCC ==
-        MAKE_FOURCC('D', 'X', 'T', '1')) {
+            MAKE_FOURCC('D', 'X', 'T', '1') ||
+        ddsFile.m_header.m_pixelFormat.m_fourCC ==
+            MAKE_FOURCC('D', 'S', 'T', '1')) {
         blockSize = 8;
     }
 
@@ -371,10 +389,7 @@ std::shared_ptr<Image> decodeDst5(const std::vector<uint8_t>& data) {
     // Set the file header to DXT5, the file is now decoded and can be read
     ddsFile.m_header.m_pixelFormat.m_fourCC = MAKE_FOURCC('D', 'X', 'T', '5');
 
-    auto decoded = decodeDxt5Internal(ddsFile);
-    decoded->setFormatString("DST5");
-
-    return decoded;
+    return decodeDxt5Internal(ddsFile);
 }
 
 std::shared_ptr<Image> decodeDxt5(const std::vector<uint8_t>& data) {
@@ -396,6 +411,183 @@ std::shared_ptr<Image> decodeDxt5(const std::vector<uint8_t>& data) {
     }
 
     return decodeDxt5Internal(ddsFile);
+}
+
+std::shared_ptr<Image> decodeDst1(const std::vector<uint8_t>& data) {
+    // Read in the DDS file from memory
+    membuf memoryBuffer(data.data(), data.size());
+    std::istream stream(&memoryBuffer);
+
+    dds::dds_file_t ddsFile{};
+
+    // Verify that we could read the file correctly
+    if (!dds::readFile(stream, ddsFile)) {
+        return nullptr;
+    }
+
+    // Verify that this is in fact a DST1 compressed file
+    if (ddsFile.m_header.m_pixelFormat.m_fourCC !=
+        MAKE_FOURCC('D', 'S', 'T', '1')) {
+        return nullptr;
+    }
+
+    // The raw blocks data as it would appear in the file
+    std::vector<uint8_t> imageData = concatDdsImageData(ddsFile);
+
+    // Vector to hold the unshuffled block data
+    std::vector<uint8_t> outputImage(imageData.size());
+
+    // Block offsets for unshuffling
+    uint32_t blockOffset2 = 0;
+    uint32_t blockOffset3 = blockOffset2 + ((uint32_t)imageData.size() >> 1);
+
+    // Count of all blocks in the image
+    uint32_t blockCount = (blockOffset3 - blockOffset2) / 4;
+
+    // Unshuffle the blocks
+    uint32_t writeIdx = 0;
+    for (uint32_t i = 0; i < blockCount; i++) {
+        COPY_BYTES(imageData, outputImage, blockOffset2, 4, writeIdx);
+        COPY_BYTES(imageData, outputImage, blockOffset3, 4, writeIdx);
+
+        blockOffset2 += 4;
+        blockOffset3 += 4;
+    }
+
+    // Reconstruct the image data in the dds_file_t structure
+    reconstructDdsImageData(ddsFile, outputImage);
+
+    // Set the file header to DXT1, the file is now decoded and can be read
+    ddsFile.m_header.m_pixelFormat.m_fourCC = MAKE_FOURCC('D', 'X', 'T', '1');
+
+    return decodeDxt1Internal(ddsFile);
+}
+
+std::shared_ptr<Image> decodeDxt1(const std::vector<uint8_t>& data) {
+    // Read in the DDS file from memory
+    membuf memoryBuffer(data.data(), data.size());
+    std::istream stream(&memoryBuffer);
+
+    dds::dds_file_t ddsFile{};
+
+    // Verify that we could read the file correctly
+    if (!dds::readFile(stream, ddsFile)) {
+        return nullptr;
+    }
+
+    // Verify that this is in fact a DXT1 compressed file
+    if (ddsFile.m_header.m_pixelFormat.m_fourCC !=
+        MAKE_FOURCC('D', 'X', 'T', '1')) {
+        return nullptr;
+    }
+
+    return decodeDxt1Internal(ddsFile);
+}
+
+std::shared_ptr<Image> decodeDxt3(const std::vector<uint8_t>& data) {
+    // Read in the DDS file from memory
+    membuf memoryBuffer(data.data(), data.size());
+    std::istream stream(&memoryBuffer);
+
+    dds::dds_file_t ddsFile{};
+
+    // Verify that we could read the file correctly
+    if (!dds::readFile(stream, ddsFile)) {
+        return nullptr;
+    }
+
+    // Verify that it is indeed compressed as DXT3
+    if (ddsFile.m_header.m_pixelFormat.m_fourCC !=
+        MAKE_FOURCC('D', 'X', 'T', '3')) {
+        return nullptr;
+    }
+
+    std::vector<uint8_t> decompressedData(ddsFile.m_header.m_width *
+                                          ddsFile.m_header.m_height * 4);
+
+    squish::DecompressImage(decompressedData.data(), ddsFile.m_header.m_width,
+                            ddsFile.m_header.m_height,
+                            ddsFile.m_mainImage.data(), squish::kDxt3);
+
+    return std::make_shared<Image>(ddsFile.m_header.m_width,
+                                   ddsFile.m_header.m_height, decompressedData);
+}
+
+std::shared_ptr<Image> decodeUncompressedDds(const std::vector<uint8_t>& data) {
+    // Read in the DDS file from memory
+    membuf memoryBuffer(data.data(), data.size());
+    std::istream stream(&memoryBuffer);
+
+    dds::dds_file_t ddsFile{};
+
+    // Verify that we could read the file correctly
+    if (!dds::readFile(stream, ddsFile)) {
+        return nullptr;
+    }
+
+    // Verify that it is indeed uncompressed data
+    if ((ddsFile.m_header.m_pixelFormat.m_flags & dds::DDPF_RGB) == 0) {
+        return nullptr;
+    }
+
+    // Utility to extract a byte from val using the provided mask
+    auto extractMasked = [](uint64_t val, uint64_t mask) {
+        uint64_t masked = val & mask;
+
+        uint8_t maskShiftedBytes = 0;
+        while ((mask & 0xFF) == 0) {
+            maskShiftedBytes++;
+            mask = mask >> 8;
+        }
+
+        return (uint8_t)((masked >> (maskShiftedBytes * 8)) & 0xFF);
+    };
+
+    // We want to be as correct as possible, so we reorganise the pixel data
+    // to respect the RGBA flags set in the pixel format of the file (we
+    // don't know if the channel order is RGBA, ARGB, ABGR or BGRA, etc.,
+    // but we should be able to handle all these cases)
+    std::vector<uint8_t> reorganisedImageData(ddsFile.m_header.m_width *
+                                              ddsFile.m_header.m_height * 4);
+
+    // Get how many bytes are there per pixel
+    uint8_t bytesPerPixel = ddsFile.m_header.m_pixelFormat.m_rgbBitCount / 8;
+    for (int i = 0; i < ddsFile.m_mainImage.size(); i += bytesPerPixel) {
+        // Set up an integer to store the whole pixel, as large as we can
+        // support
+        uint64_t pixelData = 0;
+
+        // Combine all the bytes of this pixel into our single large integer
+        for (int j = 0; j < bytesPerPixel; j++) {
+            pixelData |= (uint64_t)ddsFile.m_mainImage[i + j] << (j * 8);
+        }
+
+        // Extract the components of this pixel according to the flags set in
+        // the file
+        reorganisedImageData[i] =
+            extractMasked(pixelData, ddsFile.m_header.m_pixelFormat.m_rBitMask);
+
+        reorganisedImageData[i + 1] =
+            extractMasked(pixelData, ddsFile.m_header.m_pixelFormat.m_gBitMask);
+
+        reorganisedImageData[i + 2] =
+            extractMasked(pixelData, ddsFile.m_header.m_pixelFormat.m_bBitMask);
+
+        uint8_t alphaValue = 0xFF;
+
+        // If the file has stored alpha, use that insteaed of fully opaque
+        if ((ddsFile.m_header.m_pixelFormat.m_flags & dds::DDPF_ALPHAPIXELS) !=
+            0) {
+            alphaValue = extractMasked(
+                pixelData, ddsFile.m_header.m_pixelFormat.m_aBitMask);
+        }
+
+        reorganisedImageData[i + 3] = alphaValue;
+    }
+
+    return std::make_shared<Image>(ddsFile.m_header.m_width,
+                                   ddsFile.m_header.m_height,
+                                   reorganisedImageData);
 }
 
 // Encoders
@@ -527,8 +719,8 @@ std::vector<uint8_t> encodeJfifWithAlpha(const Image& image) {
     return finalData;
 }
 
-// Pretty self-explanatory code, we generate mip-maps down to 1x1 pixels, every
-// level is half of the previous
+// Pretty self-explanatory code, we generate mip-maps down to 1x1 pixels,
+// every level is half of the previous
 std::vector<Image> generateMipMaps(const Image& image) {
     std::vector<Image> mipmaps;
 
@@ -547,7 +739,7 @@ std::vector<Image> generateMipMaps(const Image& image) {
                            image.getHeight(), image.getWidth() * 4,
                            mipmapData.data(), width, height, width * 4, 4);
 
-        Image mipmap{width, height, mipmapData, "RAW"};
+        Image mipmap{width, height, mipmapData};
 
         mipmaps.push_back(mipmap);
     } while (width != 1 || height != 1);
@@ -556,8 +748,8 @@ std::vector<Image> generateMipMaps(const Image& image) {
 }
 
 // Encode an image as DXT5, this is again, used by multiple resources in a
-// package that are compressed or encoded differently. Mip-maps are generated
-// automatically.
+// package that are compressed or encoded differently. Mip-maps are
+// generated automatically.
 dds::dds_file_t encodeDxt5Internal(const Image& image) {
     // Generate mip-maps and compress them
     std::vector<Image> rawMipmaps = generateMipMaps(image);
@@ -621,6 +813,69 @@ dds::dds_file_t encodeDxt5Internal(const Image& image) {
     return ddsFile;
 }
 
+dds::dds_file_t encodeDxt1Internal(const Image& image) {
+    // Generate mip-maps and compress them
+    std::vector<Image> rawMipmaps = generateMipMaps(image);
+    std::vector<std::vector<uint8_t>> mipmaps(rawMipmaps.size());
+
+    for (int i = 0; i < rawMipmaps.size(); i++) {
+        const Image& mipmapData = rawMipmaps[i];
+        std::vector<uint8_t> encoded(
+            DDS_IMAGE_SIZE(mipmapData.getWidth(), mipmapData.getHeight(), 8));
+
+        squish::CompressImage(
+            mipmapData.getPixelData().data(), mipmapData.getWidth(),
+            mipmapData.getHeight(), encoded.data(),
+            squish::kDxt1 | squish::kColourIterativeClusterFit);
+
+        mipmaps[i] = encoded;
+    }
+
+    // Set up the DDS header with correct values
+
+    dds::dds_pixelformat_t pixelFormat{
+        32,                               // m_size
+        dds::DDPF_FOURCC,                 // m_flags
+        MAKE_FOURCC('D', 'X', 'T', '1'),  // m_fourCC
+        0,                                // m_rgbBitCount
+        0,                                // m_rBitMask
+        0,                                // m_gBitMask
+        0,                                // m_bBitMask
+        0                                 // m_aBitMask
+    };
+
+    dds::dds_header_t header{
+        124,  // m_size
+        dds::DDSD_HEIGHT | dds::DDSD_WIDTH | dds::DDSD_CAPS |
+            dds::DDSD_PIXELFORMAT | dds::DDSD_MIPMAPCOUNT,  // m_flags
+        image.getHeight(),
+        image.getWidth(),
+        0,                                  // m_pitchOrLinearSize
+        1,                                  // m_depth
+        1 + (uint32_t)mipmaps.size(),       // m_mipMapCount
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},  // m_reserved
+        pixelFormat,
+        dds::DDSCAPS_COMPLEX | dds::DDSCAPS_MIPMAP,  // m_caps,
+        0,                                           // m_caps2
+        0,                                           // m_caps3
+        0                                            // m_reserved2
+    };
+
+    // Compress the main image as well
+
+    std::vector<uint8_t> mainImage(
+        DDS_IMAGE_SIZE(image.getWidth(), image.getHeight(), 8));
+
+    squish::CompressImage(image.getPixelData().data(), image.getWidth(),
+                          image.getHeight(), mainImage.data(),
+                          squish::kDxt1 | squish::kColourIterativeClusterFit);
+
+    // Create the final DDS file
+    dds::dds_file_t ddsFile{header, mainImage, mipmaps};
+
+    return ddsFile;
+}
+
 std::vector<uint8_t> encodeDst5(const Image& image) {
     dds::dds_file_t dxtFile = encodeDxt5Internal(image);
 
@@ -670,30 +925,146 @@ std::vector<uint8_t> encodeDst5(const Image& image) {
     return dds::writeFile(dxtFile);
 }
 
+std::vector<uint8_t> encodeDst1(const Image& image) {
+    dds::dds_file_t dxtFile = encodeDxt1Internal(image);
+
+    std::vector<uint8_t> imageData = concatDdsImageData(dxtFile);
+
+    // Shuffle the blocks around
+    uint32_t blockCount = (uint32_t)imageData.size() / 8;
+
+    std::vector<uint8_t> block0(blockCount * 4);
+    std::vector<uint8_t> block1(blockCount * 4);
+
+    uint32_t c0 = 0;
+    uint32_t c1 = 0;
+
+    uint32_t sourceIdx = 0;
+
+    for (uint32_t i = 0; i < blockCount; i++) {
+        COPY_BYTES(imageData, block0, sourceIdx, 4, c0);
+        sourceIdx += 4;
+
+        COPY_BYTES(imageData, block1, sourceIdx, 4, c1);
+        sourceIdx += 4;
+    }
+
+    std::vector<uint8_t> shuffledData(imageData.size());
+
+    uint32_t c = 0;
+    COPY_BYTES(block0, shuffledData, 0, c0, c);
+    COPY_BYTES(block1, shuffledData, 0, c1, c);
+
+    reconstructDdsImageData(dxtFile, shuffledData);
+
+    dxtFile.m_header.m_pixelFormat.m_fourCC = MAKE_FOURCC('D', 'S', 'T', '1');
+
+    return dds::writeFile(dxtFile);
+}
+
 std::vector<uint8_t> encodeDxt5(const Image& image) {
     dds::dds_file_t dxtFile = encodeDxt5Internal(image);
 
     return dds::writeFile(dxtFile);
 }
 
+std::vector<uint8_t> encodeDxt1(const Image& image) {
+    dds::dds_file_t dxtFile = encodeDxt1Internal(image);
+
+    return dds::writeFile(dxtFile);
+}
+
+std::vector<uint8_t> encodeDxt3(const Image& image) {
+    // Generate mip-maps and compress them
+    std::vector<Image> rawMipmaps = generateMipMaps(image);
+    std::vector<std::vector<uint8_t>> mipmaps(rawMipmaps.size());
+
+    for (int i = 0; i < rawMipmaps.size(); i++) {
+        const Image& mipmapData = rawMipmaps[i];
+        std::vector<uint8_t> encoded(
+            DDS_IMAGE_SIZE(mipmapData.getWidth(), mipmapData.getHeight(), 16));
+
+        squish::CompressImage(
+            mipmapData.getPixelData().data(), mipmapData.getWidth(),
+            mipmapData.getHeight(), encoded.data(),
+            squish::kDxt3 | squish::kColourIterativeClusterFit);
+
+        mipmaps[i] = encoded;
+    }
+
+    // Set up the DDS header with correct values
+
+    dds::dds_pixelformat_t pixelFormat{
+        32,                               // m_size
+        dds::DDPF_FOURCC,                 // m_flags
+        MAKE_FOURCC('D', 'X', 'T', '3'),  // m_fourCC
+        0,                                // m_rgbBitCount
+        0,                                // m_rBitMask
+        0,                                // m_gBitMask
+        0,                                // m_bBitMask
+        0                                 // m_aBitMask
+    };
+
+    dds::dds_header_t header{
+        124,  // m_size
+        dds::DDSD_HEIGHT | dds::DDSD_WIDTH | dds::DDSD_CAPS |
+            dds::DDSD_PIXELFORMAT | dds::DDSD_MIPMAPCOUNT,  // m_flags
+        image.getHeight(),
+        image.getWidth(),
+        0,                                  // m_pitchOrLinearSize
+        1,                                  // m_depth
+        1 + (uint32_t)mipmaps.size(),       // m_mipMapCount
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},  // m_reserved
+        pixelFormat,
+        dds::DDSCAPS_COMPLEX | dds::DDSCAPS_MIPMAP,  // m_caps,
+        0,                                           // m_caps2
+        0,                                           // m_caps3
+        0                                            // m_reserved2
+    };
+
+    // Compress the main image as well
+
+    std::vector<uint8_t> mainImage(
+        DDS_IMAGE_SIZE(image.getWidth(), image.getHeight(), 16));
+
+    squish::CompressImage(image.getPixelData().data(), image.getWidth(),
+                          image.getHeight(), mainImage.data(),
+                          squish::kDxt3 | squish::kColourIterativeClusterFit);
+
+    // Create the final DDS file
+    dds::dds_file_t ddsFile{header, mainImage, mipmaps};
+
+    return dds::writeFile(ddsFile);
+}
+
 // Implementation of the s4pkg::internal::imagecoder::(decode / encode)
 // functions, which just delegate to the actual implementations defined
 // above
 
-typedef std::shared_ptr<Image> (*t_decoderFunction)(
+typedef std::shared_ptr<Image> (*decoderFunction_t)(
     const std::vector<uint8_t>&);
 
-typedef std::vector<uint8_t> (*t_encoderFunction)(const Image&);
+typedef std::vector<uint8_t> (*encoderFunction_t)(const Image&);
 
-const std::unordered_map<ImageFormat, t_decoderFunction> g_decoderMapping = {
+const std::unordered_map<ImageFormat, decoderFunction_t> g_decoderMapping = {
     {JFIF_WITH_ALPHA, &decodeJfifWithAlpha},
     {DST5, &decodeDst5},
-    {DXT5, &decodeDxt5}};
+    {DXT5, &decodeDxt5},
+    {DST1, &decodeDst1},
+    {DXT1, &decodeDxt1},
+    {DXT3, &decodeDxt3},
+    {DDS_UNCOMPRESSED, &decodeUncompressedDds},
+};
 
-const std::unordered_map<ImageFormat, t_encoderFunction> g_encoderMapping = {
+const std::unordered_map<ImageFormat, encoderFunction_t> g_encoderMapping = {
     {JFIF_WITH_ALPHA, &encodeJfifWithAlpha},
     {DST5, &encodeDst5},
-    {DXT5, &encodeDxt5}};
+    {DXT5, &encodeDxt5},
+    {DST1, &encodeDst1},
+    {DXT1, &encodeDxt1},
+    {DXT3, &encodeDxt3},
+    // TODO: Encoder for uncompressed DDS
+};
 
 template <typename T>
 T tryGetFunction(const std::unordered_map<ImageFormat, T>& mapping,
@@ -707,7 +1078,7 @@ T tryGetFunction(const std::unordered_map<ImageFormat, T>& mapping,
 
 std::shared_ptr<Image> decode(const std::vector<uint8_t>& data,
                               ImageFormat format) {
-    t_decoderFunction chosenDecoder = tryGetFunction(g_decoderMapping, format);
+    decoderFunction_t chosenDecoder = tryGetFunction(g_decoderMapping, format);
     if (chosenDecoder != nullptr && data.size() > 0) {
         return chosenDecoder(data);
     }
@@ -716,7 +1087,7 @@ std::shared_ptr<Image> decode(const std::vector<uint8_t>& data,
 }
 
 std::vector<uint8_t> encode(const Image& image, ImageFormat format) {
-    t_encoderFunction chosenEncoder = tryGetFunction(g_encoderMapping, format);
+    encoderFunction_t chosenEncoder = tryGetFunction(g_encoderMapping, format);
     if (chosenEncoder != nullptr) {
         return chosenEncoder(image);
     }

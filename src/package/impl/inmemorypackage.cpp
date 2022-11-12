@@ -37,7 +37,12 @@ internal::InMemoryPackage::InMemoryPackage(std::istream& stream) {
         throw PackageException("stream.good() == false");
     }
 
-    streams::readPackageHeader(stream, this->m_packageHeader);
+    try {
+        streams::readPackageHeader(stream, this->m_packageHeader);
+    } catch (PackageException e) {
+        throw PackageException(fmt::format(
+            "Exception while reading package header: {}", e.what()));
+    }
 
     uint64_t indexPosition;
     if (this->m_packageHeader.m_indexRecordPosition != 0) {
@@ -48,45 +53,69 @@ internal::InMemoryPackage::InMemoryPackage(std::istream& stream) {
 
     stream.seekg(indexPosition);
 
-    streams::readPackageFlags(stream, this->m_flags);
+    try {
+        streams::readPackageFlags(stream, this->m_flags);
 
-    if (this->m_flags.m_constantType != 0) {
-        streams::readUint32(stream, this->m_constantTypeId);
+        if (this->m_flags.m_constantType != 0) {
+            streams::readUint32(stream, this->m_constantTypeId);
+        }
+
+        if (this->m_flags.m_constantGroup != 0) {
+            streams::readUint32(stream, this->m_constantGroupId);
+        }
+
+        if (this->m_flags.m_constantInstanceEx != 0) {
+            streams::readUint32(stream, this->m_constantInstanceIdEx);
+        }
+    } catch (PackageException e) {
+        throw PackageException(
+            fmt::format("Exception while reading package flags: {}", e.what()));
     }
 
-    if (this->m_flags.m_constantGroup != 0) {
-        streams::readUint32(stream, this->m_constantGroupId);
+    try {
+        streams::readIndex(stream, this->m_flags,
+                           this->m_packageHeader.m_indexRecordEntryCount,
+                           this->m_index);
+    } catch (PackageException e) {
+        throw PackageException(
+            fmt::format("Exception while reading package index: {}", e.what()));
     }
 
-    if (this->m_flags.m_constantInstanceEx != 0) {
-        streams::readUint32(stream, this->m_constantInstanceIdEx);
+    try {
+        streams::readRecords(stream, this->m_index, this->m_records);
+    } catch (PackageException e) {
+        throw PackageException(fmt::format(
+            "Exception while reading package records: {}", e.what()));
     }
-
-    streams::readIndex(stream, this->m_flags,
-                       this->m_packageHeader.m_indexRecordEntryCount,
-                       this->m_index);
-
-    streams::readRecords(stream, this->m_index, this->m_records);
 
     for (const auto& record : this->m_records.m_records) {
         index_entry_t associatedEntry = this->m_index.m_entries[record.m_index];
 
-        std::shared_ptr<IResourceFactory> resourceFactory =
+        const IResourceFactory* resourceFactory =
             internal::globals::getResourceFactoryFor(
                 (ResourceType)associatedEntry.m_type);
 
         if (resourceFactory != nullptr) {
-            std::shared_ptr<IResource> parsedResource = resourceFactory->create(
-                associatedEntry.m_type, associatedEntry.m_instanceEx,
-                associatedEntry.m_instance, associatedEntry.m_group,
-                record.m_data);
+            try {
+                std::shared_ptr<IResource> parsedResource =
+                    resourceFactory->create(
+                        associatedEntry.m_type, associatedEntry.m_instanceEx,
+                        associatedEntry.m_instance, associatedEntry.m_group,
+                        record.m_data);
 
-            if (parsedResource != nullptr) {
-                this->m_resources.push_back(parsedResource);
-            } else {
+                if (parsedResource != nullptr) {
+                    this->m_resources.push_back(parsedResource);
+                } else {
+                    throw PackageException(
+                        fmt::format("Resource of type {:#x} returned no parsed "
+                                    "implementation.",
+                                    associatedEntry.m_type));
+                }
+            } catch (PackageException e) {
                 throw PackageException(fmt::format(
-                    "Resource of type {:#x} returned no parsed implementation.",
-                    associatedEntry.m_type));
+                    "Exception while reading resource {:#x} ({}): {}",
+                    associatedEntry.m_type, resourceFactory->toString(),
+                    e.what()));
             }
         } else {
             throw PackageException(
@@ -96,8 +125,8 @@ internal::InMemoryPackage::InMemoryPackage(std::istream& stream) {
         }
     }
 
-    this->m_valid = true;  // There should be better validation here, but for
-                           // the time being, this is fine™
+    this->m_valid = true;  // There should be better validation here, but
+                           // for the time being, this is fine™
 }
 
 bool internal::InMemoryPackage::deleteResource(

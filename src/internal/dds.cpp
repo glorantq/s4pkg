@@ -29,6 +29,7 @@
 
 #include <s4pkg/internal/membuf.h>
 #include <s4pkg/internal/streams.h>
+#include <s4pkg/packageexception.h>
 
 namespace s4pkg::internal::dds {
 
@@ -170,49 +171,38 @@ dds_header_t readHeader(std::istream& stream) {
     return header;
 }
 
-bool readFile(std::istream& stream, dds_file_t& file) {
-    uint8_t magicBytes[4];
-    uint8_t expectedMagic[] = {'D', 'D', 'S', ' '};
-
-    streams::readBytes(stream, magicBytes, 4);
-
-    // Verify that this actually is a DDS file
-    for (int i = 0; i < 4; i++) {
-        if (magicBytes[i] != expectedMagic[i]) {
-            return false;
-        }
-    }
-
-    file.m_header = readHeader(stream);
-
-    // Verify the two required tags (there are other tags that are required, but
-    // Microsoft recommends against checking for them), see:
-    // https://learn.microsoft.com/fi-fi/windows/win32/direct3ddds/dds-header
-    if ((file.m_header.m_flags & DDSD_HEIGHT) == 0 ||
-        (file.m_header.m_flags & DDSD_WIDTH) == 0) {
-        return false;
-    }
+void readCompressedImageData(std::istream& stream, dds_file_t& file) {
+    uint32_t width = file.m_header.m_width;
+    uint32_t height = file.m_header.m_height;
 
     // Calculate the block size, see:
     // https://learn.microsoft.com/en-gb/windows/win32/direct3ddds/dds-file-layout-for-textures
     uint8_t blockSize = 16;
     if (file.m_header.m_pixelFormat.m_fourCC ==
-        MAKE_FOURCC('D', 'X', 'T', '1')) {
+            MAKE_FOURCC('D', 'X', 'T', '1') ||
+        file.m_header.m_pixelFormat.m_fourCC ==
+            MAKE_FOURCC('D', 'S', 'T', '1')) {
         blockSize = 8;
     }
 
     // Read in the main image
-    uint32_t width = file.m_header.m_width;
-    uint32_t height = file.m_header.m_height;
-
-    file.m_mainImage =
-        std::vector<uint8_t>(DDS_IMAGE_SIZE(width, height, blockSize));
-    streams::readBytes(stream, file.m_mainImage.data(),
-                       (int)file.m_mainImage.size());
+    try {
+        file.m_mainImage =
+            std::vector<uint8_t>(DDS_IMAGE_SIZE(width, height, blockSize));
+        streams::readBytes(stream, file.m_mainImage.data(),
+                           (int)file.m_mainImage.size());
+    } catch (PackageException e) {
+        throw PackageException(
+            fmt::format("Reading DDS main image (compressed) (requested size: "
+                        "{}, position: "
+                        "{}, block size: {}, header: {}): {}",
+                        file.m_mainImage.size(), stream.tellg(), blockSize,
+                        headerToString(file.m_header), e.what()));
+    }
 
     // Then make room for the mipmaps
-    file.m_mipmaps =
-        std::vector<std::vector<uint8_t>>(file.m_header.m_mipMapCount - 1);
+    file.m_mipmaps = std::vector<std::vector<uint8_t>>(
+        std::max<int32_t>(0, file.m_header.m_mipMapCount - 1));
 
     // And read them in (if there are any)
     for (int i = 0; i < file.m_mipmaps.size(); i++) {
@@ -226,6 +216,86 @@ bool readFile(std::istream& stream, dds_file_t& file) {
         streams::readBytes(stream, mipmap.data(), (int)mipmap.size());
 
         file.m_mipmaps[i] = mipmap;
+    }
+}
+
+void readUncompressedImageData(std::istream& stream, dds_file_t& file) {
+    uint32_t width = file.m_header.m_width;
+    uint32_t height = file.m_header.m_height;
+
+    uint8_t bytesPerPixel = file.m_header.m_pixelFormat.m_rgbBitCount / 8;
+
+    // Read in the main image
+    try {
+        file.m_mainImage = std::vector<uint8_t>(width * height * bytesPerPixel);
+        streams::readBytes(stream, file.m_mainImage.data(),
+                           (int)file.m_mainImage.size());
+    } catch (PackageException e) {
+        throw PackageException(fmt::format(
+            "Reading DDS main image (uncompressed) (requested size: "
+            "{}, position: "
+            "{}, bpp: {}, header: {}): {}",
+            file.m_mainImage.size(), stream.tellg(), bytesPerPixel,
+            headerToString(file.m_header), e.what()));
+    }
+
+    // Then make room for the mipmaps
+    file.m_mipmaps = std::vector<std::vector<uint8_t>>(
+        std::max<int32_t>(0, file.m_header.m_mipMapCount - 1));
+
+    // And read them in (if there are any)
+    for (int i = 0; i < file.m_mipmaps.size(); i++) {
+        width /= 2;
+        height /= 2;
+
+        width = std::max<uint32_t>(1, width);
+        height = std::max<uint32_t>(1, height);
+
+        std::vector<uint8_t> mipmap(width * height * bytesPerPixel);
+        streams::readBytes(stream, mipmap.data(), (int)mipmap.size());
+
+        file.m_mipmaps[i] = mipmap;
+    }
+}
+
+bool readFile(std::istream& stream, dds_file_t& file) {
+    uint8_t magicBytes[4];
+    uint8_t expectedMagic[] = {'D', 'D', 'S', ' '};
+
+    streams::readBytes(stream, magicBytes, 4);
+
+    // Verify that this actually is a DDS file
+    for (int i = 0; i < 4; i++) {
+        if (magicBytes[i] != expectedMagic[i]) {
+            return false;
+        }
+    }
+
+    try {
+        file.m_header = readHeader(stream);
+    } catch (PackageException e) {
+        throw PackageException(fmt::format("Reading DDS header: {}", e.what()));
+    }
+
+    // Verify the two required tags (there are other tags that are required, but
+    // Microsoft recommends against checking for them), see:
+    // https://learn.microsoft.com/fi-fi/windows/win32/direct3ddds/dds-header
+    if ((file.m_header.m_flags & DDSD_HEIGHT) == 0 ||
+        (file.m_header.m_flags & DDSD_WIDTH) == 0) {
+        return false;
+    }
+
+    // Read in the image data
+
+    if ((file.m_header.m_pixelFormat.m_flags & DDPF_FOURCC) !=
+        0) {  // Compressed image
+        readCompressedImageData(stream, file);
+    } else if ((file.m_header.m_pixelFormat.m_flags & DDPF_RGB) !=
+               0) {  // Uncompressed image
+        readUncompressedImageData(stream, file);
+    } else {
+        throw PackageException(
+            fmt::format("Unrecognised DDS file! {}", fileToString(file)));
     }
 
     return true;

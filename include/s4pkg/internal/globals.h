@@ -32,7 +32,7 @@ extern const std::map<s4pkg::ResourceType,
                       std::shared_ptr<s4pkg::IResourceFactory>>
     g_resourceFactoryMapping;
 
-extern S4PKG_EXPORT const std::shared_ptr<s4pkg::IResourceFactory>
-    getResourceFactoryFor(s4pkg::ResourceType);
+extern S4PKG_EXPORT const s4pkg::IResourceFactory* getResourceFactoryFor(
+    s4pkg::ResourceType);
 
 };  // namespace s4pkg::internal::globals
