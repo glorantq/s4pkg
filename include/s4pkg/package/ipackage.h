@@ -25,6 +25,7 @@
 #include <s4pkg/package/types.h>
 #include <s4pkg/resources/iresource.h>
 
+#include <memory>
 #include <ostream>
 #include <vector>
 
