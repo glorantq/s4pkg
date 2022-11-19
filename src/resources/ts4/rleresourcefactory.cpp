@@ -18,34 +18,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include <s4pkg/resources/ts4/rleresource.h>
+#include <s4pkg/resources/ts4/rleresourcefactory.h>
 
-namespace s4pkg {
+namespace s4pkg::factories::ts4 {
 
-/**
- * @brief Type of a resource
- * @see https://forums.thesims.com/en_US/discussion/858947/maxis-info-index
- */
-enum ResourceType {
-    UNKNOWN = 0x0,
-    THUMBNAIL_IMAGE = 0x3C1AF1F2,
+std::shared_ptr<s4pkg::IResource> RLEResourceFactory::create(
+    uint32_t type,
+    uint32_t instanceEx,
+    uint32_t instance,
+    uint32_t group,
+    const std::vector<uint8_t>& data) const {
+    if (type == ResourceType::RLE2_IMAGE || type == ResourceType::RLES_IMAGE) {
+        return std::make_shared<resources::ts4::RLEResource>(
+            (s4pkg::ResourceType)type, instanceEx, instance, group, data);
+    }
 
-    DST_IMAGE = 0x00B2D882,
-    DST_IMAGE_2 = 0xB6C8B6A0,
+    return nullptr;
+}
 
-    RLE2_IMAGE = 0x3453CF95,
-    RLES_IMAGE = 0xBA856C78,
-};
+const std::string RLEResourceFactory::toString() const {
+    return "RLEResourceFactory []";
+}
 
-/**
- * @brief CompressionType of a resource
- */
-enum CompressionType {
-    UNCOMPRESSED = 0x0000,
-    STREAMABLE = 0xfffe,
-    INTERNAL = 0xffff,
-    DELETED = 0xffe0,
-    ZLIB = 0x5a42
-};
-
-}  // namespace s4pkg
+}  // namespace s4pkg::factories::ts4

@@ -20,32 +20,24 @@
 
 #pragma once
 
-namespace s4pkg {
+#include <s4pkg/internal/export.h>
+#include <s4pkg/resources/iresourcefactory.h>
 
-/**
- * @brief Type of a resource
- * @see https://forums.thesims.com/en_US/discussion/858947/maxis-info-index
- */
-enum ResourceType {
-    UNKNOWN = 0x0,
-    THUMBNAIL_IMAGE = 0x3C1AF1F2,
+namespace s4pkg::factories::ts4 {
 
-    DST_IMAGE = 0x00B2D882,
-    DST_IMAGE_2 = 0xB6C8B6A0,
+class S4PKG_EXPORT RLEResourceFactory : public IResourceFactory {
+    // IResourceFactory interface
+   public:
+    std::shared_ptr<IResource> create(
+        uint32_t type,
+        uint32_t instanceEx,
+        uint32_t instance,
+        uint32_t group,
+        const std::vector<uint8_t>&) const override;
 
-    RLE2_IMAGE = 0x3453CF95,
-    RLES_IMAGE = 0xBA856C78,
+    // Object interface
+   public:
+    const std::string toString() const override;
 };
 
-/**
- * @brief CompressionType of a resource
- */
-enum CompressionType {
-    UNCOMPRESSED = 0x0000,
-    STREAMABLE = 0xfffe,
-    INTERNAL = 0xffff,
-    DELETED = 0xffe0,
-    ZLIB = 0x5a42
-};
-
-}  // namespace s4pkg
+}  // namespace s4pkg::factories::ts4

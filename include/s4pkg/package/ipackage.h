@@ -60,7 +60,7 @@ class S4PKG_EXPORT IPackage : public Object {
     virtual const std::vector<std::shared_ptr<IResource>> getResources()
         const = 0;
 
-    void write(std::ostream& stream) const;
+    void write(std::ostream& stream, bool updateTime = false) const;
 };
 
 };  // namespace s4pkg

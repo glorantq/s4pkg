@@ -301,18 +301,6 @@ bool readFile(std::istream& stream, dds_file_t& file) {
     return true;
 }
 
-#define COPY_UINT32(value, to, c)        \
-    {                                    \
-        uint8_t _v[4];                   \
-        _v[3] = (value >> 24) & 0xFF;    \
-        _v[2] = (value >> 16) & 0xFF;    \
-        _v[1] = (value >> 8) & 0xFF;     \
-        _v[0] = value & 0xFF;            \
-        for (int _i = 0; _i < 4; _i++) { \
-            to[c++] = _v[_i];            \
-        }                                \
-    }
-
 // We're going for functionality over looks here
 std::vector<uint8_t> writeFile(const dds_file_t& file) {
     uint8_t magicBytes[] = {'D', 'D', 'S', ' '};

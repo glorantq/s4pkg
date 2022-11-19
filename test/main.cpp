@@ -22,7 +22,9 @@
 #define CATCH_CONFIG_WINDOWS_CRTDBG 1
 #include "catch.hpp"
 
+#include <s4pkg/internal/dds.h>
 #include <s4pkg/internal/imagecoder.h>
+#include <s4pkg/internal/rle.h>
 #include <s4pkg/package/ipackage.h>
 #include <s4pkg/package/packages.h>
 #include <s4pkg/version.h>
@@ -33,6 +35,22 @@
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
+
+TEST_CASE("Test RLE2", "imagecoder") {
+    std::ifstream rleStream("./test.rle2", std::ios_base::binary);
+
+    REQUIRE(rleStream.good());
+
+    auto rleImage = s4pkg::internal::rle::readFile(rleStream);
+    rleStream.close();
+
+    std::vector<uint8_t> ddsData =
+        s4pkg::internal::dds::writeFile(rleImage.m_ddsFile);
+
+    std::ofstream ddsStream("./test.rle2.dds", std::ios_base::binary);
+    ddsStream.write((const char*)ddsData.data(), ddsData.size());
+    ddsStream.close();
+}
 
 TEST_CASE("Test image coder", "data") {
     std::cout << "Using s4pkg version " << S4PKG_VERSION << std::endl;

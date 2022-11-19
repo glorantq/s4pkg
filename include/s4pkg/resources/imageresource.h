@@ -70,6 +70,12 @@ class S4PKG_EXPORT IImageResource : public IResource {
         return this->m_format;
     }
 
+    void setImage(uint32_t width,
+                  uint32_t height,
+                  std::vector<uint8_t> pixelData) {
+        m_image = std::make_shared<internal::Image>(width, height, pixelData);
+    }
+
    protected:
     void setDataWithFormat(internal::imagecoder::ImageFormat format,
                            const std::vector<uint8_t>& data) {

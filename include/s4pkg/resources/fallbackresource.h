@@ -41,6 +41,8 @@ class S4PKG_EXPORT FallbackResource : public IResource {
         : IResource(instanceEx, instance, group, (ResourceType)type),
           m_data(std::move(data)) {}
 
+    void setData(const std::vector<uint8_t> data) { this->m_data = data; }
+
     // IResource interface
    public:
     std::vector<uint8_t> write() const override;

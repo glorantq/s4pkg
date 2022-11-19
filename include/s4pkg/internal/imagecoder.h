@@ -35,6 +35,7 @@ namespace s4pkg::internal::imagecoder {
  * just yet.
  */
 enum ImageFormat {
+    UNKNOWN,
     DST5,
     JFIF_WITH_ALPHA,
     DXT5,
@@ -42,6 +43,8 @@ enum ImageFormat {
     DST1,
     DXT3,
     DDS_UNCOMPRESSED,
+    RLE2,
+    RLES,
 };
 
 /**

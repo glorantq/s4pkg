@@ -25,7 +25,7 @@
 
 namespace s4pkg {
 
-void IPackage::write(std::ostream& stream) const {
+void IPackage::write(std::ostream& stream, bool updateTime) const {
     // Construct flags structure
     PackageFlags flags = this->getPackageFlags();
 
@@ -115,6 +115,8 @@ void IPackage::write(std::ostream& stream) const {
 
     internal::streams::writeIndex(stream, packageFlags, packageIndex);
 
+    uint32_t indexEnd = stream.tellp();
+
     // Now we create a header for the file
 
     package_version_t fileVersion{this->getFileVersion().m_majorVersion,
@@ -124,7 +126,9 @@ void IPackage::write(std::ostream& stream) const {
                                   this->getUserVersion().m_minorVersion};
 
     package_time_t createdTime = this->getCreationTime().toTimestamp();
-    package_time_t updatedTime = this->getModifiedTime().toTimestamp();
+    package_time_t updatedTime =
+        updateTime ? PackageTime{std::chrono::system_clock::now()}.toTimestamp()
+                   : this->getModifiedTime().toTimestamp();
 
     package_header_t packageHeader{
         {'D', 'B', 'P', 'F'},  // file identifier
@@ -135,10 +139,11 @@ void IPackage::write(std::ostream& stream) const {
         updatedTime,
         0,  // m_unused1
         (uint32_t)packageIndex.m_entries.size(),
-        0,                      // m_indexRecordPositionLow
-        sizeof(index_entry_t),  // TODO: Calculate accurately
-        {0, 0, 0},              // m_unused3
-        3,                      // m_unused4
+        0,                         // m_indexRecordPositionLow
+        indexEnd - indexPosition,  // size of the whole index (including flags,
+                                   // constant values and the index itself)
+        {0, 0, 0},                 // m_unused3
+        3,                         // m_unused4
         indexPosition,
         {0, 0, 0, 0, 0, 0}  // m_unused5
     };

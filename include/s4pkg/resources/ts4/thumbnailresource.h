@@ -27,14 +27,12 @@ namespace s4pkg::resources::ts4 {
 
 class S4PKG_EXPORT ThumbnailResource : public IImageResource {
    public:
-    ThumbnailResource(uint32_t instanceEx,
+    ThumbnailResource(s4pkg::ResourceType originalType,
+                      uint32_t instanceEx,
                       uint32_t instance,
                       uint32_t group,
                       const std::vector<uint8_t>& data)
-        : IImageResource(instanceEx,
-                         instance,
-                         group,
-                         ResourceType::THUMBNAIL_IMAGE) {
+        : IImageResource(instanceEx, instance, group, originalType) {
         setDataWithFormat(internal::imagecoder::ImageFormat::JFIF_WITH_ALPHA,
                           data);
     }

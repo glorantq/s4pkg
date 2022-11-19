@@ -29,8 +29,12 @@ std::shared_ptr<s4pkg::IResource> DSTResourceFactory::create(
     uint32_t instance,
     uint32_t group,
     const std::vector<uint8_t>& data) const {
-    return std::make_shared<resources::ts4::DSTResource>(instanceEx, instance,
-                                                         group, data);
+    if (type == ResourceType::DST_IMAGE || type == ResourceType::DST_IMAGE_2) {
+        return std::make_shared<resources::ts4::DSTResource>(
+            (s4pkg::ResourceType)type, instanceEx, instance, group, data);
+    }
+
+    return nullptr;
 }
 
 const std::string DSTResourceFactory::toString() const {

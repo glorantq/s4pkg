@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 project(s4pkg
         VERSION 0.0.2
         DESCRIPTION "A C++ library for working with Sims 4 package files"
-        HOMEPAGE_URL "glorantv.hu"
+        HOMEPAGE_URL "https://glorantq.github.io/TravisStudio/"
         LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -59,6 +59,9 @@ add_library(s4pkg SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/package/impl/inmemorypa
     ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ts4/thumbnailresourcefactory.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ts4/dstresource.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ts4/dstresourcefactory.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ts4/rleresource.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ts4/rleresourcefactory.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/internal/rle.cpp
     ${LIB_HEADER_FILES})
 
 target_link_libraries(s4pkg PRIVATE fmt::fmt miniz jpeg squish)

@@ -138,8 +138,6 @@ bool internal::InMemoryPackage::deleteResource(
     for (auto it = this->m_resources.begin(); it != this->m_resources.end();) {
         if (it->get() != nullptr && resource->equals(it->get())) {
             this->m_resources.erase(it);
-            this->m_packageHeader.m_updatedTime =
-                PackageTime{std::chrono::system_clock::now()}.toTimestamp();
 
             return true;
         }

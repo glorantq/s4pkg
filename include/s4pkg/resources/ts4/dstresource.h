@@ -33,11 +33,12 @@ namespace s4pkg::resources::ts4 {
 
 class S4PKG_EXPORT DSTResource : public IImageResource {
    public:
-    DSTResource(uint32_t instanceEx,
+    DSTResource(s4pkg::ResourceType originalType,
+                uint32_t instanceEx,
                 uint32_t instance,
                 uint32_t group,
                 const std::vector<uint8_t>& data)
-        : IImageResource(instanceEx, instance, group, ResourceType::DST_IMAGE) {
+        : IImageResource(instanceEx, instance, group, originalType) {
         // Provide a way to make an empty image
         if (data.size() < sizeof(internal::dds::dds_header_t)) {
             setDataWithFormat(internal::imagecoder::DST5, data);
@@ -56,7 +57,7 @@ class S4PKG_EXPORT DSTResource : public IImageResource {
         internal::dds::dds_header_t ddsHeader =
             internal::dds::readHeader(stream);
 
-        auto imageFormat = internal::imagecoder::DST5;
+        auto imageFormat = internal::imagecoder::UNKNOWN;
 
         if (ddsHeader.m_pixelFormat.m_fourCC ==
             MAKE_FOURCC('D', 'S', 'T', '5')) {

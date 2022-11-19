@@ -21,6 +21,7 @@
 #include <s4pkg/internal/dds.h>
 #include <s4pkg/internal/imagecoder.h>
 #include <s4pkg/internal/membuf.h>
+#include <s4pkg/internal/rle.h>
 #include <s4pkg/internal/streams.h>
 
 #include <cmath>
@@ -590,6 +591,29 @@ std::shared_ptr<Image> decodeUncompressedDds(const std::vector<uint8_t>& data) {
                                    reorganisedImageData);
 }
 
+// Utility function to get an rle_file_t from the raw data (undoes the RLE
+// compression)
+
+rle::rle_file_t decodeRleInternal(const std::vector<uint8_t>& data) {
+    membuf memoryBuffer(data.data(), data.size());
+    std::istream stream(&memoryBuffer);
+
+    return rle::readFile(stream);
+}
+
+// Decodes all types of RLE images
+std::shared_ptr<Image> decodeRle(const std::vector<uint8_t>& data) {
+    rle::rle_file_t rleFile = decodeRleInternal(data);
+
+    if (rleFile.m_rleHeader.m_fourCC == rle::fourcc_t::DXT5) {
+        return decodeDxt5Internal(rleFile.m_ddsFile);
+    }
+
+    // TODO: Handle L8 when ready
+
+    return nullptr;
+}
+
 // Encoders
 
 std::vector<uint8_t> encodeJfifWithAlpha(const Image& image) {
@@ -664,9 +688,9 @@ std::vector<uint8_t> encodeJfifWithAlpha(const Image& image) {
     alphaApp0Segment[2] = 'F';
     alphaApp0Segment[3] = 'A';
 
-    alphaApp0Segment[4] = (alphaImageSize >> 24 & 0xFF) << 24;
-    alphaApp0Segment[5] = (alphaImageSize >> 16 & 0xFF) << 16;
-    alphaApp0Segment[6] = (alphaImageSize >> 8 & 0xFF) << 8;
+    alphaApp0Segment[4] = (alphaImageSize >> 24 & 0xFF);
+    alphaApp0Segment[5] = (alphaImageSize >> 16 & 0xFF);
+    alphaApp0Segment[6] = (alphaImageSize >> 8 & 0xFF);
     alphaApp0Segment[7] = (alphaImageSize & 0xFF);
 
     // Copy the PNG image from before into the APP0 data
@@ -1054,6 +1078,8 @@ const std::unordered_map<ImageFormat, decoderFunction_t> g_decoderMapping = {
     {DXT1, &decodeDxt1},
     {DXT3, &decodeDxt3},
     {DDS_UNCOMPRESSED, &decodeUncompressedDds},
+    {RLE2, &decodeRle},
+    {RLES, &decodeRle},
 };
 
 const std::unordered_map<ImageFormat, encoderFunction_t> g_encoderMapping = {
@@ -1064,6 +1090,8 @@ const std::unordered_map<ImageFormat, encoderFunction_t> g_encoderMapping = {
     {DXT1, &encodeDxt1},
     {DXT3, &encodeDxt3},
     // TODO: Encoder for uncompressed DDS
+    // TODO: Encoder for RLE2
+    // TODO: Encoder for RLES
 };
 
 template <typename T>

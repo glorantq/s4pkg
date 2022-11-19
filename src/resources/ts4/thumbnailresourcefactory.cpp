@@ -29,8 +29,12 @@ std::shared_ptr<s4pkg::IResource> ThumbnailResourceFactory::create(
     uint32_t instance,
     uint32_t group,
     const std::vector<uint8_t>& data) const {
-    return std::make_shared<resources::ts4::ThumbnailResource>(
-        instanceEx, instance, group, data);
+    if (type == ResourceType::THUMBNAIL_IMAGE) {
+        return std::make_shared<resources::ts4::ThumbnailResource>(
+            (s4pkg::ResourceType)type, instanceEx, instance, group, data);
+    }
+
+    return nullptr;
 }
 
 const std::string ThumbnailResourceFactory::toString() const {

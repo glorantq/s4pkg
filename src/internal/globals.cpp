@@ -21,18 +21,27 @@
 #include <s4pkg/internal/globals.h>
 #include <s4pkg/resources/fallbackresourcefactory.h>
 #include <s4pkg/resources/ts4/dstresourcefactory.h>
+#include <s4pkg/resources/ts4/rleresourcefactory.h>
 #include <s4pkg/resources/ts4/thumbnailresourcefactory.h>
 
 namespace s4pkg::internal::globals {
 
+#define MAKE_FACTORY(t) std::make_shared<t>()
+
 const std::map<s4pkg::ResourceType, std::shared_ptr<s4pkg::IResourceFactory>>
     g_resourceFactoryMapping = {
         {s4pkg::ResourceType::UNKNOWN,
-         std::make_shared<s4pkg::factories::FallbackResourceFactory>()},
+         MAKE_FACTORY(s4pkg::factories::FallbackResourceFactory)},
         {s4pkg::ResourceType::THUMBNAIL_IMAGE,
-         std::make_shared<s4pkg::factories::ts4::ThumbnailResourceFactory>()},
+         MAKE_FACTORY(s4pkg::factories::ts4::ThumbnailResourceFactory)},
         {s4pkg::ResourceType::DST_IMAGE,
-         std::make_shared<s4pkg::factories::ts4::DSTResourceFactory>()},
+         MAKE_FACTORY(s4pkg::factories::ts4::DSTResourceFactory)},
+        {s4pkg::ResourceType::DST_IMAGE_2,
+         MAKE_FACTORY(s4pkg::factories::ts4::DSTResourceFactory)},
+        {s4pkg::ResourceType::RLE2_IMAGE,
+         MAKE_FACTORY(s4pkg::factories::ts4::RLEResourceFactory)},
+        {s4pkg::ResourceType::RLES_IMAGE,
+         MAKE_FACTORY(s4pkg::factories::ts4::RLEResourceFactory)},
 };
 
 const s4pkg::IResourceFactory* getResourceFactoryFor(s4pkg::ResourceType type) {

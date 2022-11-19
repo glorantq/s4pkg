@@ -25,6 +25,8 @@
 #include <string>
 #include <vector>
 
+#include <s4pkg/internal/export.h>
+
 #ifndef MAKE_FOURCC
 #define MAKE_FOURCC(ch0, ch1, ch2, ch3)                           \
     ((uint32_t)(uint8_t)(ch0) | ((uint32_t)(uint8_t)(ch1) << 8) | \
@@ -43,6 +45,21 @@
             to[c++] = from[pos + _i];           \
         }                                       \
     }
+
+#define COPY_UINT32(value, to, c)        \
+    {                                    \
+        uint8_t _v[4];                   \
+        _v[3] = (value >> 24) & 0xFF;    \
+        _v[2] = (value >> 16) & 0xFF;    \
+        _v[1] = (value >> 8) & 0xFF;     \
+        _v[0] = value & 0xFF;            \
+        for (int _i = 0; _i < 4; _i++) { \
+            to[c++] = _v[_i];            \
+        }                                \
+    }
+
+// TODO: Should only be exported when actively developing, users should not need
+// to rely on these functions
 
 namespace s4pkg::internal::dds {
 
@@ -116,13 +133,12 @@ typedef struct dds_file_t {
 } dds_file_t;
 
 /**
- * @brief Read a DDS file. Compressed files only, that's what the game uses
- * anyways
+ * @brief Read a DDS file.
  * @return whether the reading was successful or not
  */
 bool readFile(std::istream&, dds_file_t&);
 
-std::vector<uint8_t> writeFile(const dds_file_t&);
+S4PKG_EXPORT std::vector<uint8_t> writeFile(const dds_file_t&);
 
 std::string fileToString(const dds_file_t&);
 
