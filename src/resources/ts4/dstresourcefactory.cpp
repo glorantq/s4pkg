@@ -28,7 +28,7 @@ std::shared_ptr<s4pkg::IResource> DSTResourceFactory::create(
     uint32_t instanceEx,
     uint32_t instance,
     uint32_t group,
-    const std::vector<uint8_t>& data) const {
+    const lib::ByteBuffer& data) const {
     if (type == ResourceType::DST_IMAGE || type == ResourceType::DST_IMAGE_2) {
         return std::make_shared<resources::ts4::DSTResource>(
             (s4pkg::ResourceType)type, instanceEx, instance, group, data);
@@ -37,7 +37,7 @@ std::shared_ptr<s4pkg::IResource> DSTResourceFactory::create(
     return nullptr;
 }
 
-const std::string DSTResourceFactory::toString() const {
+const lib::String DSTResourceFactory::toString() const {
     return "DSTResourceFactory []";
 }
 

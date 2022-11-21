@@ -29,6 +29,7 @@
 #include <ostream>
 #include <vector>
 
+extern "C" {
 namespace s4pkg {
 
 /**
@@ -47,8 +48,8 @@ class S4PKG_EXPORT IPackage : public Object {
     virtual const PackageVersion getFileVersion() const = 0;
     virtual const PackageVersion getUserVersion() const = 0;
 
-    virtual const PackageTime getCreationTime() const = 0;
-    virtual const PackageTime getModifiedTime() const = 0;
+    virtual const int32_t getCreationTime() const = 0;
+    virtual const int32_t getModifiedTime() const = 0;
 
     virtual const PackageHeader getPackageHeader() const = 0;
     virtual const PackageFlags getPackageFlags() const = 0;
@@ -65,3 +66,4 @@ class S4PKG_EXPORT IPackage : public Object {
 };
 
 };  // namespace s4pkg
+}

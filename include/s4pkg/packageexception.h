@@ -21,6 +21,7 @@
 #pragma once
 
 #include <s4pkg/internal/export.h>
+#include <s4pkg/lib/string.h>
 
 #include <exception>
 #include <string>
@@ -30,14 +31,14 @@ namespace s4pkg {
 /**
  * @brief If an exception is thrown in this library, this is the one.
  */
-class S4PKG_EXPORT PackageException : public std::exception {
+class S4PKG_EXPORT PackageException {
    private:
-    std::string m_message;
+    lib::String m_message;
 
    public:
-    explicit PackageException(const std::string message)
+    explicit PackageException(const lib::String message)
         : m_message(std::move(message)){};
-    const char* what() const noexcept override { return m_message.c_str(); }
+    const char* what() const noexcept { return m_message.c_str(); }
 };
 
 }  // namespace s4pkg

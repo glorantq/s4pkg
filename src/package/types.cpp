@@ -20,26 +20,15 @@
 
 #include <s4pkg/package/ipackage.h>
 
-#include <fmt/chrono.h>
 #include <fmt/core.h>
 
 namespace s4pkg {
 
-const std::string PackageVersion::toString() const {
+const lib::String PackageVersion::toString() const {
     return fmt::format("{}.{}", this->m_majorVersion, this->m_minorVersion);
 }
 
-const std::string PackageTime::toString() const {
-    return fmt::format("{:%Y-%m-%d %H:%M:%S}", this->m_timePoint);
-}
-
-long PackageTime::toTimestamp() const {
-    return (long)std::chrono::duration_cast<std::chrono::seconds>(
-               this->m_timePoint.time_since_epoch())
-        .count();
-}
-
-const std::string PackageHeader::toString() const {
+const lib::String PackageHeader::toString() const {
     return fmt::format(
         "[ recordEntryCount={}, recordPositionLow={}, recordPosition={}, "
         "recordSize={} ]",
@@ -47,14 +36,14 @@ const std::string PackageHeader::toString() const {
         this->m_indexRecordPosition, this->m_indexRecordSize);
 }
 
-const std::string PackageFlags::toString() const {
+const lib::String PackageFlags::toString() const {
     return fmt::format(
         "[ isConstantType={}, isConstantGroup={}, isConstantInstance={} ]",
         this->m_isConstantType, this->m_isConstantGroup,
         this->m_isConstantInstance);
 }
 
-const std::string IndexEntry::toString() const {
+const lib::String IndexEntry::toString() const {
     std::string resourceTypeName;
     switch (this->m_type) {
         case ResourceType::THUMBNAIL_IMAGE:

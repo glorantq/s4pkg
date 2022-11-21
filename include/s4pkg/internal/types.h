@@ -24,6 +24,8 @@
 #include <memory>
 #include <vector>
 
+#include <s4pkg/lib/bytebuffer.h>
+
 // The types defined here are deliberately C-style, to keep them as close to the
 // Maxis-provided .bt files as possible. These are purely to be used internally,
 // there are C++-style classes provided for everything here.
@@ -97,7 +99,7 @@ typedef struct index_t {
 typedef struct raw_record_t {
     uint32_t m_index;
     uint32_t m_size;
-    std::vector<uint8_t> m_data;
+    s4pkg::lib::ByteBuffer m_data;
 } raw_record_t;
 
 typedef struct records_t {

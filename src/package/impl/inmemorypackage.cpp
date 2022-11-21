@@ -162,12 +162,12 @@ const PackageVersion internal::InMemoryPackage::getUserVersion() const {
             this->m_packageHeader.m_userVersion.m_minor};
 }
 
-const PackageTime internal::InMemoryPackage::getCreationTime() const {
-    return {this->m_packageHeader.m_creationTime};
+const int32_t internal::InMemoryPackage::getCreationTime() const {
+    return this->m_packageHeader.m_creationTime;
 }
 
-const PackageTime internal::InMemoryPackage::getModifiedTime() const {
-    return {this->m_packageHeader.m_updatedTime};
+const int32_t internal::InMemoryPackage::getModifiedTime() const {
+    return this->m_packageHeader.m_updatedTime;
 }
 
 const PackageHeader internal::InMemoryPackage::getPackageHeader() const {
@@ -210,13 +210,13 @@ internal::InMemoryPackage::getResources() const {
     return this->m_resources;
 }
 
-const std::string internal::InMemoryPackage::toString() const {
+const lib::String internal::InMemoryPackage::toString() const {
     return fmt::format(
         "(InMemoryPackage) [ header={}, fileVersion={}, userVersion={}, "
         "createdTime={}, modifiedTime={}, flags={} ]",
         this->getPackageHeader().toString(), this->getFileVersion().toString(),
-        this->getUserVersion().toString(), this->getCreationTime().toString(),
-        this->getModifiedTime().toString(), this->getPackageFlags().toString());
+        this->getUserVersion().toString(), this->getCreationTime(),
+        this->getModifiedTime(), this->getPackageFlags().toString());
 }
 
 };  // namespace s4pkg

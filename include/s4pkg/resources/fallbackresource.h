@@ -30,28 +30,28 @@ namespace s4pkg::resources {
  */
 class S4PKG_EXPORT FallbackResource : public IResource {
    private:
-    std::vector<uint8_t> m_data{};
+    lib::ByteBuffer m_data{};
 
    public:
     FallbackResource(uint32_t type,
                      uint32_t instanceEx,
                      uint32_t instance,
                      uint32_t group,
-                     std::vector<uint8_t> data)
+                     const lib::ByteBuffer& data)
         : IResource(instanceEx, instance, group, (ResourceType)type),
-          m_data(std::move(data)) {}
+          m_data(data) {}
 
-    void setData(const std::vector<uint8_t> data) { this->m_data = data; }
+    void setData(const lib::ByteBuffer& data) { this->m_data = data; }
 
     // IResource interface
    public:
-    std::vector<uint8_t> write() const override;
+    lib::ByteBuffer write() const override;
 
-    std::string getFriendlyName() const override { return "Unknown"; }
+    lib::String getFriendlyName() const override { return "Unknown"; }
 
     // Object interface
    public:
-    const std::string toString() const override;
+    const lib::String toString() const override;
 };
 
 }  // namespace s4pkg::resources

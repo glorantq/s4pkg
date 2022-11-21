@@ -21,6 +21,7 @@
 #pragma once
 
 #include <s4pkg/internal/export.h>
+#include <s4pkg/lib/bytebuffer.h>
 #include <s4pkg/object.h>
 #include <s4pkg/package/enums.h>
 
@@ -51,9 +52,9 @@ class S4PKG_EXPORT IResource : public Object {
     virtual ResourceType getResourceType() const {
         return this->m_resourceType;
     }
-    virtual std::vector<uint8_t> write() const = 0;
+    virtual lib::ByteBuffer write() const = 0;
 
-    virtual std::string getFriendlyName() const = 0;
+    virtual lib::String getFriendlyName() const = 0;
 };
 
 }  // namespace s4pkg

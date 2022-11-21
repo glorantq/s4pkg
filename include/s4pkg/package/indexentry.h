@@ -21,9 +21,11 @@
 #pragma once
 
 #include <s4pkg/internal/export.h>
+#include <s4pkg/lib/string.h>
 #include <s4pkg/object.h>
 #include <s4pkg/package/enums.h>
 
+extern "C" {
 namespace s4pkg {
 
 class S4PKG_EXPORT IndexEntry : public Object {
@@ -65,7 +67,8 @@ class S4PKG_EXPORT IndexEntry : public Object {
 
     // s4pkg::Object interface
    public:
-    const std::string toString() const override;
+    const lib::String toString() const override;
 };
 
 }  // namespace s4pkg
+}

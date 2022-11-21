@@ -22,9 +22,11 @@
 
 #include <fmt/core.h>
 
+#include <miniz.h>
+
 namespace s4pkg::internal {
 
-const std::string Image::toString() const {
+const lib::String Image::toString() const {
     return fmt::format("Image [ width={}, height={} ]", this->m_width,
                        this->m_height);
 }

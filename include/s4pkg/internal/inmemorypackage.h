@@ -58,8 +58,8 @@ class InMemoryPackage : public s4pkg::IPackage {
 
     const PackageVersion getFileVersion() const override;
     const PackageVersion getUserVersion() const override;
-    const PackageTime getCreationTime() const override;
-    const PackageTime getModifiedTime() const override;
+    const int32_t getCreationTime() const override;
+    const int32_t getModifiedTime() const override;
     const PackageHeader getPackageHeader() const override;
     const PackageFlags getPackageFlags() const override;
     const std::vector<IndexEntry> getPackageIndex() const override;
@@ -79,7 +79,7 @@ class InMemoryPackage : public s4pkg::IPackage {
 
     // s4pkg::Object interface
    public:
-    const std::string toString() const override;
+    const lib::String toString() const override;
 };
 
 }  // namespace s4pkg::internal

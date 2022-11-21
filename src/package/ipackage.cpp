@@ -23,6 +23,8 @@
 
 #include <fmt/printf.h>
 
+#include <chrono>
+
 namespace s4pkg {
 
 void IPackage::write(std::ostream& stream, bool updateTime) const {
@@ -71,7 +73,7 @@ void IPackage::write(std::ostream& stream, bool updateTime) const {
 
     for (int i = 0; i < resources.size(); i++) {
         std::shared_ptr<IResource> resource = resources[i];
-        std::vector<uint8_t> resourceData = resource->write();
+        lib::ByteBuffer resourceData = resource->write();
 
         raw_record_t record{(uint32_t)i, (uint32_t)resourceData.size(),
                             resourceData};
@@ -115,7 +117,7 @@ void IPackage::write(std::ostream& stream, bool updateTime) const {
 
     internal::streams::writeIndex(stream, packageFlags, packageIndex);
 
-    uint32_t indexEnd = stream.tellp();
+    uint32_t indexEnd = (uint32_t)stream.tellp();
 
     // Now we create a header for the file
 
@@ -125,10 +127,12 @@ void IPackage::write(std::ostream& stream, bool updateTime) const {
     package_version_t userVersion{this->getUserVersion().m_majorVersion,
                                   this->getUserVersion().m_minorVersion};
 
-    package_time_t createdTime = this->getCreationTime().toTimestamp();
+    package_time_t createdTime = this->getCreationTime();
     package_time_t updatedTime =
-        updateTime ? PackageTime{std::chrono::system_clock::now()}.toTimestamp()
-                   : this->getModifiedTime().toTimestamp();
+        updateTime ? (long)std::chrono::duration_cast<std::chrono::seconds>(
+                         std::chrono::system_clock::now().time_since_epoch())
+                         .count()
+                   : this->getModifiedTime();
 
     package_header_t packageHeader{
         {'D', 'B', 'P', 'F'},  // file identifier

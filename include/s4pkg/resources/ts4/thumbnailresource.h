@@ -31,7 +31,7 @@ class S4PKG_EXPORT ThumbnailResource : public IImageResource {
                       uint32_t instanceEx,
                       uint32_t instance,
                       uint32_t group,
-                      const std::vector<uint8_t>& data)
+                      const lib::ByteBuffer& data)
         : IImageResource(instanceEx, instance, group, originalType) {
         setDataWithFormat(internal::imagecoder::ImageFormat::JFIF_WITH_ALPHA,
                           data);
@@ -39,11 +39,11 @@ class S4PKG_EXPORT ThumbnailResource : public IImageResource {
 
     // IResource interface
    public:
-    std::string getFriendlyName() const override { return "Thumbnail Image"; }
+    lib::String getFriendlyName() const override { return "Thumbnail Image"; }
 
     // Object interface
    public:
-    const std::string toString() const override;
+    const lib::String toString() const override;
 };
 
 }  // namespace s4pkg::resources::ts4

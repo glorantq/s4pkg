@@ -65,7 +65,7 @@ STBIWDEF unsigned char* stbi_write_png_to_mem(const unsigned char* pixels,
 
 // Decoders
 
-std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
+std::shared_ptr<Image> decodeJfifWithAlpha(const lib::ByteBuffer& data) {
     // "JFIF with Alpha" is the name I've given to the format being used to
     // store thumbnails in packages. The is a standard JFIF file,
     // able to be read by regular programs. It contains the RBB data compressed
@@ -105,7 +105,7 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
     }
 
     // If we find the alpha, save it here
-    std::optional<std::vector<uint8_t>> alphaData;
+    std::optional<lib::ByteBuffer> alphaData;
 
     // Look through all the read markers to find the alpha image
     jpeg_saved_marker_ptr currentMarker = cinfo.marker_list;
@@ -126,7 +126,7 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
                 continue;
             }
 
-            alphaData = std::vector<uint8_t>(alphaImageLength);
+            alphaData = lib::ByteBuffer(alphaImageLength);
 
             for (uint32_t i = 0; i < alphaImageLength; i++) {
                 alphaData.value()[i] =
@@ -158,7 +158,7 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
     JSAMPARRAY scanlineBuffer = (cinfo.mem->alloc_sarray)(
         (j_common_ptr)&cinfo, JPOOL_IMAGE, rowStride, 1);
 
-    std::vector<uint8_t> rgbImage(rowStride * cinfo.output_height);
+    lib::ByteBuffer rgbImage(rowStride * cinfo.output_height);
 
     while (cinfo.output_scanline < cinfo.output_height) {
         if (jpeg_read_scanlines(&cinfo, scanlineBuffer, 1) > 0) {
@@ -198,7 +198,7 @@ std::shared_ptr<Image> decodeJfifWithAlpha(const std::vector<uint8_t>& data) {
         return nullptr;
     }
 
-    std::vector<uint8_t> finalImage(width * height * 4);
+    lib::ByteBuffer finalImage(width * height * 4);
 
     // Combine the two images into a single RGBA image
     for (int i = 0; i < width * height; i++) {
@@ -230,8 +230,8 @@ std::shared_ptr<Image> decodeDxt5Internal(const dds::dds_file_t& ddsFile) {
         return nullptr;
     }
 
-    std::vector<uint8_t> decompressedData(ddsFile.m_header.m_width *
-                                          ddsFile.m_header.m_height * 4);
+    lib::ByteBuffer decompressedData(ddsFile.m_header.m_width *
+                                     ddsFile.m_header.m_height * 4);
 
     squish::DecompressImage(decompressedData.data(), ddsFile.m_header.m_width,
                             ddsFile.m_header.m_height,
@@ -248,8 +248,8 @@ std::shared_ptr<Image> decodeDxt1Internal(const dds::dds_file_t& ddsFile) {
         return nullptr;
     }
 
-    std::vector<uint8_t> decompressedData(ddsFile.m_header.m_width *
-                                          ddsFile.m_header.m_height * 4);
+    lib::ByteBuffer decompressedData(ddsFile.m_header.m_width *
+                                     ddsFile.m_header.m_height * 4);
 
     squish::DecompressImage(decompressedData.data(), ddsFile.m_header.m_width,
                             ddsFile.m_header.m_height,
@@ -267,8 +267,8 @@ std::shared_ptr<Image> decodeDxt1Internal(const dds::dds_file_t& ddsFile) {
  * @param imageData: the raw block data
  */
 void reconstructDdsImageData(dds::dds_file_t& ddsFile,
-                             const std::vector<uint8_t>& imageData) {
-    std::vector<std::vector<uint8_t>> reconstructedMipmaps(
+                             const lib::ByteBuffer& imageData) {
+    std::vector<lib::ByteBuffer> reconstructedMipmaps(
         std::max<int32_t>(0, ddsFile.m_header.m_mipMapCount - 1));
 
     uint32_t mipmapCopyIdx = 0;
@@ -285,7 +285,7 @@ void reconstructDdsImageData(dds::dds_file_t& ddsFile,
 
     uint32_t mipmapPosition = DDS_IMAGE_SIZE(width, height, blockSize);
 
-    std::vector<uint8_t> reconstructedMainImage(mipmapPosition);
+    lib::ByteBuffer reconstructedMainImage(mipmapPosition);
     COPY_BYTES(imageData, reconstructedMainImage, 0,
                reconstructedMainImage.size(), mipmapCopyIdx);
     mipmapCopyIdx = 0;
@@ -297,7 +297,7 @@ void reconstructDdsImageData(dds::dds_file_t& ddsFile,
         width = std::max<uint32_t>(1, width);
         height = std::max<uint32_t>(1, height);
 
-        std::vector<uint8_t> mipmap(DDS_IMAGE_SIZE(width, height, blockSize));
+        lib::ByteBuffer mipmap(DDS_IMAGE_SIZE(width, height, blockSize));
         COPY_BYTES(imageData, mipmap, mipmapPosition, mipmap.size(),
                    mipmapCopyIdx);
 
@@ -318,14 +318,14 @@ void reconstructDdsImageData(dds::dds_file_t& ddsFile,
  * @param ddsFile: the file whose image data should be processed
  * @return the raw block data
  */
-std::vector<uint8_t> concatDdsImageData(const dds::dds_file_t& ddsFile) {
+lib::ByteBuffer concatDdsImageData(const dds::dds_file_t& ddsFile) {
     uint32_t dataSize = (uint32_t)ddsFile.m_mainImage.size();
     for (const auto& mipmap : ddsFile.m_mipmaps) {
         dataSize += (uint32_t)mipmap.size();
     }
 
     uint32_t copyIdx = 0;
-    std::vector<uint8_t> imageData(dataSize);
+    lib::ByteBuffer imageData(dataSize);
     COPY_BYTES(ddsFile.m_mainImage, imageData, 0, ddsFile.m_mainImage.size(),
                copyIdx);
 
@@ -336,7 +336,7 @@ std::vector<uint8_t> concatDdsImageData(const dds::dds_file_t& ddsFile) {
     return imageData;
 }
 
-std::shared_ptr<Image> decodeDst5(const std::vector<uint8_t>& data) {
+std::shared_ptr<Image> decodeDst5(const lib::ByteBuffer& data) {
     // Read in the DDS file from memory
     membuf memoryBuffer(data.data(), data.size());
     std::istream stream(&memoryBuffer);
@@ -355,10 +355,10 @@ std::shared_ptr<Image> decodeDst5(const std::vector<uint8_t>& data) {
     }
 
     // The raw blocks data as it would appear in the file
-    std::vector<uint8_t> imageData = concatDdsImageData(ddsFile);
+    lib::ByteBuffer imageData = concatDdsImageData(ddsFile);
 
     // Vector to hold the unshuffled block data
-    std::vector<uint8_t> outputImage(imageData.size());
+    lib::ByteBuffer outputImage(imageData.size());
 
     // Block offsets for unshuffling
     uint32_t blockOffset0 = 0;
@@ -393,7 +393,7 @@ std::shared_ptr<Image> decodeDst5(const std::vector<uint8_t>& data) {
     return decodeDxt5Internal(ddsFile);
 }
 
-std::shared_ptr<Image> decodeDxt5(const std::vector<uint8_t>& data) {
+std::shared_ptr<Image> decodeDxt5(const lib::ByteBuffer& data) {
     // Read in the DDS file from memory
     membuf memoryBuffer(data.data(), data.size());
     std::istream stream(&memoryBuffer);
@@ -414,7 +414,7 @@ std::shared_ptr<Image> decodeDxt5(const std::vector<uint8_t>& data) {
     return decodeDxt5Internal(ddsFile);
 }
 
-std::shared_ptr<Image> decodeDst1(const std::vector<uint8_t>& data) {
+std::shared_ptr<Image> decodeDst1(const lib::ByteBuffer& data) {
     // Read in the DDS file from memory
     membuf memoryBuffer(data.data(), data.size());
     std::istream stream(&memoryBuffer);
@@ -433,10 +433,10 @@ std::shared_ptr<Image> decodeDst1(const std::vector<uint8_t>& data) {
     }
 
     // The raw blocks data as it would appear in the file
-    std::vector<uint8_t> imageData = concatDdsImageData(ddsFile);
+    lib::ByteBuffer imageData = concatDdsImageData(ddsFile);
 
     // Vector to hold the unshuffled block data
-    std::vector<uint8_t> outputImage(imageData.size());
+    lib::ByteBuffer outputImage(imageData.size());
 
     // Block offsets for unshuffling
     uint32_t blockOffset2 = 0;
@@ -464,7 +464,7 @@ std::shared_ptr<Image> decodeDst1(const std::vector<uint8_t>& data) {
     return decodeDxt1Internal(ddsFile);
 }
 
-std::shared_ptr<Image> decodeDxt1(const std::vector<uint8_t>& data) {
+std::shared_ptr<Image> decodeDxt1(const lib::ByteBuffer& data) {
     // Read in the DDS file from memory
     membuf memoryBuffer(data.data(), data.size());
     std::istream stream(&memoryBuffer);
@@ -485,7 +485,7 @@ std::shared_ptr<Image> decodeDxt1(const std::vector<uint8_t>& data) {
     return decodeDxt1Internal(ddsFile);
 }
 
-std::shared_ptr<Image> decodeDxt3(const std::vector<uint8_t>& data) {
+std::shared_ptr<Image> decodeDxt3(const lib::ByteBuffer& data) {
     // Read in the DDS file from memory
     membuf memoryBuffer(data.data(), data.size());
     std::istream stream(&memoryBuffer);
@@ -503,8 +503,8 @@ std::shared_ptr<Image> decodeDxt3(const std::vector<uint8_t>& data) {
         return nullptr;
     }
 
-    std::vector<uint8_t> decompressedData(ddsFile.m_header.m_width *
-                                          ddsFile.m_header.m_height * 4);
+    lib::ByteBuffer decompressedData(ddsFile.m_header.m_width *
+                                     ddsFile.m_header.m_height * 4);
 
     squish::DecompressImage(decompressedData.data(), ddsFile.m_header.m_width,
                             ddsFile.m_header.m_height,
@@ -514,7 +514,7 @@ std::shared_ptr<Image> decodeDxt3(const std::vector<uint8_t>& data) {
                                    ddsFile.m_header.m_height, decompressedData);
 }
 
-std::shared_ptr<Image> decodeUncompressedDds(const std::vector<uint8_t>& data) {
+std::shared_ptr<Image> decodeUncompressedDds(const lib::ByteBuffer& data) {
     // Read in the DDS file from memory
     membuf memoryBuffer(data.data(), data.size());
     std::istream stream(&memoryBuffer);
@@ -527,7 +527,8 @@ std::shared_ptr<Image> decodeUncompressedDds(const std::vector<uint8_t>& data) {
     }
 
     // Verify that it is indeed uncompressed data
-    if ((ddsFile.m_header.m_pixelFormat.m_flags & dds::DDPF_RGB) == 0) {
+    if ((ddsFile.m_header.m_pixelFormat.m_flags &
+         (dds::DDPF_RGB | dds::DDPF_LUMINANCE)) == 0) {
         return nullptr;
     }
 
@@ -548,8 +549,8 @@ std::shared_ptr<Image> decodeUncompressedDds(const std::vector<uint8_t>& data) {
     // to respect the RGBA flags set in the pixel format of the file (we
     // don't know if the channel order is RGBA, ARGB, ABGR or BGRA, etc.,
     // but we should be able to handle all these cases)
-    std::vector<uint8_t> reorganisedImageData(ddsFile.m_header.m_width *
-                                              ddsFile.m_header.m_height * 4);
+    lib::ByteBuffer reorganisedImageData(ddsFile.m_header.m_width *
+                                         ddsFile.m_header.m_height * 4);
 
     // Get how many bytes are there per pixel
     uint8_t bytesPerPixel = ddsFile.m_header.m_pixelFormat.m_rgbBitCount / 8;
@@ -591,19 +592,12 @@ std::shared_ptr<Image> decodeUncompressedDds(const std::vector<uint8_t>& data) {
                                    reorganisedImageData);
 }
 
-// Utility function to get an rle_file_t from the raw data (undoes the RLE
-// compression)
-
-rle::rle_file_t decodeRleInternal(const std::vector<uint8_t>& data) {
+// Handles decoding for RLE2 and RLES
+std::shared_ptr<Image> decodeRle(const lib::ByteBuffer& data) {
     membuf memoryBuffer(data.data(), data.size());
     std::istream stream(&memoryBuffer);
 
-    return rle::readFile(stream);
-}
-
-// Decodes all types of RLE images
-std::shared_ptr<Image> decodeRle(const std::vector<uint8_t>& data) {
-    rle::rle_file_t rleFile = decodeRleInternal(data);
+    rle::rle_file_t rleFile = rle::readFile(stream);
 
     if (rleFile.m_rleHeader.m_fourCC == rle::fourcc_t::DXT5) {
         return decodeDxt5Internal(rleFile.m_ddsFile);
@@ -616,10 +610,10 @@ std::shared_ptr<Image> decodeRle(const std::vector<uint8_t>& data) {
 
 // Encoders
 
-std::vector<uint8_t> encodeJfifWithAlpha(const Image& image) {
+lib::ByteBuffer encodeJfifWithAlpha(const Image& image) {
     // Set up vectors for the RGB and A channels of the image
-    std::vector<uint8_t> rgbData(image.getWidth() * image.getHeight() * 3);
-    std::vector<uint8_t> alphaData(image.getWidth() * image.getHeight());
+    lib::ByteBuffer rgbData(image.getWidth() * image.getHeight() * 3);
+    lib::ByteBuffer alphaData(image.getWidth() * image.getHeight());
 
     // Separate the original image into an RGB array that will be JPEG
     // compressed, and an alpha array that will be saved as a greyscale PNG
@@ -682,7 +676,7 @@ std::vector<uint8_t> encodeJfifWithAlpha(const Image& image) {
     jpeg_start_compress(&cinfo, true);
 
     // Set up the ALFA APP0 data
-    std::vector<uint8_t> alphaApp0Segment(4 + 4 + alphaImageSize);
+    lib::ByteBuffer alphaApp0Segment(4 + 4 + alphaImageSize);
     alphaApp0Segment[0] = 'A';
     alphaApp0Segment[1] = 'L';
     alphaApp0Segment[2] = 'F';
@@ -731,7 +725,7 @@ std::vector<uint8_t> encodeJfifWithAlpha(const Image& image) {
     }
 
     // Copy the final image bytes into a vector for returning
-    std::vector<uint8_t> finalData(jpegBufferSize);
+    lib::ByteBuffer finalData(jpegBufferSize);
     for (uint32_t i = 0; i < jpegBufferSize; i++) {
         finalData[i] = jpegBuffer[i];
     }
@@ -758,7 +752,7 @@ std::vector<Image> generateMipMaps(const Image& image) {
         width = std::max<uint32_t>(1, width);
         height = std::max<uint32_t>(1, height);
 
-        std::vector<uint8_t> mipmapData(width * height * 4);
+        lib::ByteBuffer mipmapData(width * height * 4);
         stbir_resize_uint8(image.getPixelData().data(), image.getWidth(),
                            image.getHeight(), image.getWidth() * 4,
                            mipmapData.data(), width, height, width * 4, 4);
@@ -777,11 +771,11 @@ std::vector<Image> generateMipMaps(const Image& image) {
 dds::dds_file_t encodeDxt5Internal(const Image& image) {
     // Generate mip-maps and compress them
     std::vector<Image> rawMipmaps = generateMipMaps(image);
-    std::vector<std::vector<uint8_t>> mipmaps(rawMipmaps.size());
+    std::vector<lib::ByteBuffer> mipmaps(rawMipmaps.size());
 
     for (int i = 0; i < rawMipmaps.size(); i++) {
         const Image& mipmapData = rawMipmaps[i];
-        std::vector<uint8_t> encoded(
+        lib::ByteBuffer encoded(
             DDS_IMAGE_SIZE(mipmapData.getWidth(), mipmapData.getHeight(), 16));
 
         squish::CompressImage(
@@ -824,7 +818,7 @@ dds::dds_file_t encodeDxt5Internal(const Image& image) {
 
     // Compress the main image as well
 
-    std::vector<uint8_t> mainImage(
+    lib::ByteBuffer mainImage(
         DDS_IMAGE_SIZE(image.getWidth(), image.getHeight(), 16));
 
     squish::CompressImage(image.getPixelData().data(), image.getWidth(),
@@ -840,11 +834,11 @@ dds::dds_file_t encodeDxt5Internal(const Image& image) {
 dds::dds_file_t encodeDxt1Internal(const Image& image) {
     // Generate mip-maps and compress them
     std::vector<Image> rawMipmaps = generateMipMaps(image);
-    std::vector<std::vector<uint8_t>> mipmaps(rawMipmaps.size());
+    std::vector<lib::ByteBuffer> mipmaps(rawMipmaps.size());
 
     for (int i = 0; i < rawMipmaps.size(); i++) {
         const Image& mipmapData = rawMipmaps[i];
-        std::vector<uint8_t> encoded(
+        lib::ByteBuffer encoded(
             DDS_IMAGE_SIZE(mipmapData.getWidth(), mipmapData.getHeight(), 8));
 
         squish::CompressImage(
@@ -887,7 +881,7 @@ dds::dds_file_t encodeDxt1Internal(const Image& image) {
 
     // Compress the main image as well
 
-    std::vector<uint8_t> mainImage(
+    lib::ByteBuffer mainImage(
         DDS_IMAGE_SIZE(image.getWidth(), image.getHeight(), 8));
 
     squish::CompressImage(image.getPixelData().data(), image.getWidth(),
@@ -900,18 +894,18 @@ dds::dds_file_t encodeDxt1Internal(const Image& image) {
     return ddsFile;
 }
 
-std::vector<uint8_t> encodeDst5(const Image& image) {
+lib::ByteBuffer encodeDst5(const Image& image) {
     dds::dds_file_t dxtFile = encodeDxt5Internal(image);
 
-    std::vector<uint8_t> imageData = concatDdsImageData(dxtFile);
+    lib::ByteBuffer imageData = concatDdsImageData(dxtFile);
 
     // Shuffle the blocks around
     uint32_t blockCount = (uint32_t)imageData.size() / 16;
 
-    std::vector<uint8_t> block0(blockCount * 2);
-    std::vector<uint8_t> block1(blockCount * 6);
-    std::vector<uint8_t> block2(blockCount * 4);
-    std::vector<uint8_t> block3(blockCount * 4);
+    lib::ByteBuffer block0(blockCount * 2);
+    lib::ByteBuffer block1(blockCount * 6);
+    lib::ByteBuffer block2(blockCount * 4);
+    lib::ByteBuffer block3(blockCount * 4);
 
     uint32_t c0 = 0;
     uint32_t c1 = 0;
@@ -934,7 +928,7 @@ std::vector<uint8_t> encodeDst5(const Image& image) {
         sourceIdx += 4;
     }
 
-    std::vector<uint8_t> shuffledData(imageData.size());
+    lib::ByteBuffer shuffledData(imageData.size());
 
     uint32_t c = 0;
     COPY_BYTES(block0, shuffledData, 0, c0, c);
@@ -949,16 +943,16 @@ std::vector<uint8_t> encodeDst5(const Image& image) {
     return dds::writeFile(dxtFile);
 }
 
-std::vector<uint8_t> encodeDst1(const Image& image) {
+lib::ByteBuffer encodeDst1(const Image& image) {
     dds::dds_file_t dxtFile = encodeDxt1Internal(image);
 
-    std::vector<uint8_t> imageData = concatDdsImageData(dxtFile);
+    lib::ByteBuffer imageData = concatDdsImageData(dxtFile);
 
     // Shuffle the blocks around
     uint32_t blockCount = (uint32_t)imageData.size() / 8;
 
-    std::vector<uint8_t> block0(blockCount * 4);
-    std::vector<uint8_t> block1(blockCount * 4);
+    lib::ByteBuffer block0(blockCount * 4);
+    lib::ByteBuffer block1(blockCount * 4);
 
     uint32_t c0 = 0;
     uint32_t c1 = 0;
@@ -973,7 +967,7 @@ std::vector<uint8_t> encodeDst1(const Image& image) {
         sourceIdx += 4;
     }
 
-    std::vector<uint8_t> shuffledData(imageData.size());
+    lib::ByteBuffer shuffledData(imageData.size());
 
     uint32_t c = 0;
     COPY_BYTES(block0, shuffledData, 0, c0, c);
@@ -986,26 +980,26 @@ std::vector<uint8_t> encodeDst1(const Image& image) {
     return dds::writeFile(dxtFile);
 }
 
-std::vector<uint8_t> encodeDxt5(const Image& image) {
+lib::ByteBuffer encodeDxt5(const Image& image) {
     dds::dds_file_t dxtFile = encodeDxt5Internal(image);
 
     return dds::writeFile(dxtFile);
 }
 
-std::vector<uint8_t> encodeDxt1(const Image& image) {
+lib::ByteBuffer encodeDxt1(const Image& image) {
     dds::dds_file_t dxtFile = encodeDxt1Internal(image);
 
     return dds::writeFile(dxtFile);
 }
 
-std::vector<uint8_t> encodeDxt3(const Image& image) {
+lib::ByteBuffer encodeDxt3(const Image& image) {
     // Generate mip-maps and compress them
     std::vector<Image> rawMipmaps = generateMipMaps(image);
-    std::vector<std::vector<uint8_t>> mipmaps(rawMipmaps.size());
+    std::vector<lib::ByteBuffer> mipmaps(rawMipmaps.size());
 
     for (int i = 0; i < rawMipmaps.size(); i++) {
         const Image& mipmapData = rawMipmaps[i];
-        std::vector<uint8_t> encoded(
+        lib::ByteBuffer encoded(
             DDS_IMAGE_SIZE(mipmapData.getWidth(), mipmapData.getHeight(), 16));
 
         squish::CompressImage(
@@ -1048,7 +1042,7 @@ std::vector<uint8_t> encodeDxt3(const Image& image) {
 
     // Compress the main image as well
 
-    std::vector<uint8_t> mainImage(
+    lib::ByteBuffer mainImage(
         DDS_IMAGE_SIZE(image.getWidth(), image.getHeight(), 16));
 
     squish::CompressImage(image.getPixelData().data(), image.getWidth(),
@@ -1065,10 +1059,9 @@ std::vector<uint8_t> encodeDxt3(const Image& image) {
 // functions, which just delegate to the actual implementations defined
 // above
 
-typedef std::shared_ptr<Image> (*decoderFunction_t)(
-    const std::vector<uint8_t>&);
+typedef std::shared_ptr<Image> (*decoderFunction_t)(const lib::ByteBuffer&);
 
-typedef std::vector<uint8_t> (*encoderFunction_t)(const Image&);
+typedef lib::ByteBuffer (*encoderFunction_t)(const Image&);
 
 const std::unordered_map<ImageFormat, decoderFunction_t> g_decoderMapping = {
     {JFIF_WITH_ALPHA, &decodeJfifWithAlpha},
@@ -1104,8 +1097,7 @@ T tryGetFunction(const std::unordered_map<ImageFormat, T>& mapping,
     }
 }
 
-std::shared_ptr<Image> decode(const std::vector<uint8_t>& data,
-                              ImageFormat format) {
+std::shared_ptr<Image> decode(const lib::ByteBuffer& data, ImageFormat format) {
     decoderFunction_t chosenDecoder = tryGetFunction(g_decoderMapping, format);
     if (chosenDecoder != nullptr && data.size() > 0) {
         return chosenDecoder(data);
@@ -1114,7 +1106,7 @@ std::shared_ptr<Image> decode(const std::vector<uint8_t>& data,
     return nullptr;
 }
 
-std::vector<uint8_t> encode(const Image& image, ImageFormat format) {
+lib::ByteBuffer encode(const Image& image, ImageFormat format) {
     encoderFunction_t chosenEncoder = tryGetFunction(g_encoderMapping, format);
     if (chosenEncoder != nullptr) {
         return chosenEncoder(image);

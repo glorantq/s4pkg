@@ -24,7 +24,7 @@
 
 namespace s4pkg::resources::ts4 {
 
-const std::string RLEResource::toString() const {
+const lib::String RLEResource::toString() const {
     return fmt::format("RLEResource [ width={}, height={} ]", this->getWidth(),
                        this->getHeight());
 }

@@ -24,11 +24,11 @@
 
 namespace s4pkg::resources {
 
-std::vector<uint8_t> FallbackResource::write() const {
+lib::ByteBuffer FallbackResource::write() const {
     return this->m_data;
 }
 
-const std::string FallbackResource::toString() const {
+const lib::String FallbackResource::toString() const {
     return fmt::format("FallbackResource [ size={}, type={:#x} ]",
                        this->m_data.size(), this->getResourceType());
 }

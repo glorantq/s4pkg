@@ -9,6 +9,9 @@ set(CMAKE_CXX_STANDARD 17)
 
 include(GenerateExportHeader)
 
+set(CMAKE_INSTALL_UCRT_LIBRARIES TRUE)
+include(InstallRequiredSystemLibraries)
+
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "")
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vendor/fmt)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vendor/miniz)
@@ -42,7 +45,8 @@ set_target_properties(squish PROPERTIES
     VISIBILITY_INLINES_HIDDEN NO)
 
 file(GLOB_RECURSE LIB_HEADER_FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/*/*.h)
-add_library(s4pkg SHARED ${CMAKE_CURRENT_SOURCE_DIR}/src/package/impl/inmemorypackage.cpp
+add_library(s4pkg SHARED
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/package/impl/inmemorypackage.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/package/ipackage.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/package/packages.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/package/types.cpp

@@ -21,6 +21,7 @@
 #pragma once
 
 #include <s4pkg/internal/export.h>
+#include <s4pkg/lib/bytebuffer.h>
 #include <s4pkg/object.h>
 #include <s4pkg/resources/iresource.h>
 
@@ -33,11 +34,11 @@ class S4PKG_EXPORT IResourceFactory : public Object {
    public:
     virtual std::shared_ptr<IResource> create(
         uint32_t type, /**< This is purely for fallback, to not break resources
-                          not understood (or cared about) this tool */
+                          not understood (or cared about) by this tool */
         uint32_t instanceEx,
         uint32_t instance,
         uint32_t group,
-        const std::vector<uint8_t>&) const = 0;
+        const lib::ByteBuffer&) const = 0;
 
     std::shared_ptr<IResource> createBlank(uint32_t type,
                                            uint32_t instanceEx,

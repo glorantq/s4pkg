@@ -21,6 +21,7 @@
 #pragma once
 
 #include <s4pkg/internal/export.h>
+#include <s4pkg/lib/string.h>
 #include <s4pkg/package/ipackage.h>
 
 #include <istream>
@@ -33,7 +34,7 @@ namespace s4pkg {
  */
 struct S4PKG_EXPORT PackageLoadResult {
     const std::shared_ptr<IPackage> m_package;
-    const std::string m_errorMessage;
+    const lib::String m_errorMessage;
 };
 
 /**

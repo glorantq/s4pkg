@@ -58,7 +58,7 @@ class S4PKG_EXPORT IImageResource : public IResource {
         }
     }
 
-    const std::vector<uint8_t> getPixelData() const {
+    const lib::ByteBuffer getPixelData() const {
         if (m_image) {
             return m_image->getPixelData();
         } else {
@@ -70,22 +70,20 @@ class S4PKG_EXPORT IImageResource : public IResource {
         return this->m_format;
     }
 
-    void setImage(uint32_t width,
-                  uint32_t height,
-                  std::vector<uint8_t> pixelData) {
+    void setImage(uint32_t width, uint32_t height, lib::ByteBuffer pixelData) {
         m_image = std::make_shared<internal::Image>(width, height, pixelData);
     }
 
    protected:
     void setDataWithFormat(internal::imagecoder::ImageFormat format,
-                           const std::vector<uint8_t>& data) {
+                           const lib::ByteBuffer& data) {
         this->m_format = format;
         this->m_image = internal::imagecoder::decode(data, format);
     }
 
     // IResource interface
    public:
-    std::vector<uint8_t> write() const override;
+    lib::ByteBuffer write() const override;
 };
 
 }  // namespace s4pkg::resources

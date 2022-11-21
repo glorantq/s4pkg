@@ -23,6 +23,7 @@
 #include <string>
 
 #include <s4pkg/internal/export.h>
+#include <s4pkg/lib/string.h>
 
 namespace s4pkg {
 
@@ -36,7 +37,7 @@ class S4PKG_EXPORT Object {
      * @brief Returns a human-readable representation of this object
      * @return readable state of this object
      */
-    virtual const std::string toString() const = 0;
+    virtual const lib::String toString() const = 0;
 
     bool operator==(const Object& obj) const { return equals(&obj); }
 

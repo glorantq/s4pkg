@@ -1,3 +1,23 @@
+/*
+ * Copyright (c) 2022- Gerber Lóránt Viktor
+ * Author: Gerber Lóránt Viktor <glorantv@student.elte.hu>
+ *
+ * This file is part of s4pkg.
+ *
+ * s4pkg is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <s4pkg/internal/rle.h>
 
 #include <s4pkg/internal/streams.h>
@@ -9,7 +29,7 @@ s4pkg::internal::rle::rle_header_t s4pkg::internal::rle::readHeader(
     std::istream& stream) {
     // Get the size of the whole stream, we'll need this later
     stream.seekg(0, std::istream::end);
-    int32_t streamSize = stream.tellg();
+    int32_t streamSize = (int32_t)stream.tellg();
     stream.seekg(0, std::istream::beg);
 
     // Read in basic information about the file, such as the RLE version and the
@@ -42,7 +62,8 @@ s4pkg::internal::rle::rle_header_t s4pkg::internal::rle::readHeader(
             streams::readInt32(stream, mipHeader.m_offset1);
 
             if (header.m_rleVersion == rle_version_t::RLES) {
-                streams::readInt32(stream, mipHeader.m_offset4);
+                streams::readInt32(stream,
+                                   mipHeader.m_offset4);  // Specular mask
             }
         }
 
@@ -100,7 +121,7 @@ s4pkg::internal::rle::rle_file_t s4pkg::internal::rle::readFile(
     stream.seekg(std::istream::beg);
     rleFile.m_rleData = std::vector<uint8_t>(rleFile.m_rleHeader.m_streamSize);
     streams::readBytes(stream, rleFile.m_rleData.data(),
-                       rleFile.m_rleData.size());
+                       (int)rleFile.m_rleData.size());
 
     // RLE images contain a DDS image, so we set that up here based on
     // information from the RLE header, this is all stuff that has been
@@ -122,7 +143,7 @@ s4pkg::internal::rle::rle_file_t s4pkg::internal::rle::readFile(
         ddsPixelFormat.m_rBitMask = 0x000000FF;
         ddsPixelFormat.m_gBitMask = 0x000000FF;
         ddsPixelFormat.m_bBitMask = 0x000000FF;
-        ddsPixelFormat.m_aBitMask = 0x0000000;
+        ddsPixelFormat.m_aBitMask = 0x00000000;
     } else {
         ddsPixelFormat.m_flags = dds::DDPF_FOURCC;
         ddsPixelFormat.m_rgbBitCount = 32;
@@ -343,12 +364,12 @@ s4pkg::internal::rle::rle_file_t s4pkg::internal::rle::readFile(
     uint32_t mipmapPosition = DDS_IMAGE_SIZE(
         rleFile.m_rleHeader.m_width, rleFile.m_rleHeader.m_height, blockSize);
 
-    std::vector<uint8_t> reconstructedMainImage(mipmapPosition);
+    lib::ByteBuffer reconstructedMainImage(mipmapPosition);
     COPY_BYTES(ddsImageData, reconstructedMainImage, 0,
                reconstructedMainImage.size(), mipmapCopyIdx);
     mipmapCopyIdx = 0;
 
-    std::vector<std::vector<uint8_t>> reconstructedMipmaps(
+    std::vector<lib::ByteBuffer> reconstructedMipmaps(
         std::max<int32_t>(0, ddsFile.m_header.m_mipMapCount - 1));
 
     {
@@ -362,8 +383,7 @@ s4pkg::internal::rle::rle_file_t s4pkg::internal::rle::readFile(
             width = std::max<uint32_t>(1, width);
             height = std::max<uint32_t>(1, height);
 
-            std::vector<uint8_t> mipmap(
-                DDS_IMAGE_SIZE(width, height, blockSize));
+            lib::ByteBuffer mipmap(DDS_IMAGE_SIZE(width, height, blockSize));
             COPY_BYTES(ddsImageData, mipmap, mipmapPosition, mipmap.size(),
                        mipmapCopyIdx);
 

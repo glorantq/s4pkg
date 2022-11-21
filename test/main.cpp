@@ -44,7 +44,7 @@ TEST_CASE("Test RLE2", "imagecoder") {
     auto rleImage = s4pkg::internal::rle::readFile(rleStream);
     rleStream.close();
 
-    std::vector<uint8_t> ddsData =
+    s4pkg::lib::ByteBuffer ddsData =
         s4pkg::internal::dds::writeFile(rleImage.m_ddsFile);
 
     std::ofstream ddsStream("./test.rle2.dds", std::ios_base::binary);
@@ -56,17 +56,20 @@ TEST_CASE("Test image coder", "data") {
     std::cout << "Using s4pkg version " << S4PKG_VERSION << std::endl;
 
     std::ifstream thumbnailStream("./thumbnail.jfif", std::ios_base::binary);
-    std::vector<uint8_t> fileContents(
+    std::vector<uint8_t> fileContents0(
         (std::istreambuf_iterator<char>(thumbnailStream)),
         std::istreambuf_iterator<char>());
     thumbnailStream.close();
+
+    auto fileContents =
+        s4pkg::lib::ByteBuffer(fileContents0.data(), fileContents0.size());
 
     auto decodedThumbnail = s4pkg::internal::imagecoder::decode(
         fileContents, s4pkg::internal::imagecoder::JFIF_WITH_ALPHA);
 
     REQUIRE(decodedThumbnail != nullptr);
 
-    std::cout << "Decoded thumbnail: " << decodedThumbnail->toString()
+    std::cout << "Decoded thumbnail: " << decodedThumbnail->toString().c_str()
               << std::endl;
 
     REQUIRE(decodedThumbnail->getWidth() == 104);
@@ -90,21 +93,25 @@ TEST_CASE("Test image coder", "data") {
     thumbnailOut.close();
 
     std::ifstream dstStream("./dst5.dds", std::ios_base::binary);
-    std::vector<uint8_t> dstContents(
+    std::vector<uint8_t> dstContents0(
         (std::istreambuf_iterator<char>(dstStream)),
         std::istreambuf_iterator<char>());
     dstStream.close();
+
+    s4pkg::lib::ByteBuffer dstContents(dstContents0.data(),
+                                       dstContents0.size());
 
     auto decodedDst = s4pkg::internal::imagecoder::decode(
         dstContents, s4pkg::internal::imagecoder::DST5);
 
     REQUIRE(decodedDst != nullptr);
 
-    std::cout << "Decoded DST5: " << decodedDst->toString() << std::endl;
+    std::cout << "Decoded DST5: " << decodedDst->toString().c_str()
+              << std::endl;
 
     std::cout << "Re-encoding DST5..." << std::endl;
 
-    std::vector<uint8_t> dstThumbnail = s4pkg::internal::imagecoder::encode(
+    s4pkg::lib::ByteBuffer dstThumbnail = s4pkg::internal::imagecoder::encode(
         *decodedDst, s4pkg::internal::imagecoder::DST5);
 
     std::ofstream dstOut("./dst5_out.dds", std::ios_base::binary);
@@ -115,46 +122,47 @@ TEST_CASE("Test image coder", "data") {
 }
 
 TEST_CASE("Test good in-memory package", "package") {
-    std::ifstream packageStream("./broken_.package", std::ios_base::binary);
+    std::ifstream packageStream("./TURBODRIVER_WickedWhims_Tuning.package",
+                                std::ios_base::binary);
     s4pkg::PackageLoadResult package = s4pkg::loadPackage(packageStream);
     packageStream.close();
 
-    INFO(package.m_errorMessage);
+    INFO(package.m_errorMessage.c_str());
     REQUIRE(package.m_package != nullptr);
     REQUIRE(package.m_package->isValid());
 
     s4pkg::PackageVersion fileVersion = package.m_package->getFileVersion();
     REQUIRE(fileVersion.m_majorVersion == 2);
     REQUIRE(fileVersion.m_minorVersion == 1);
-    std::cout << "Package file version: " << fileVersion.toString()
+    std::cout << "Package file version: " << fileVersion.toString().c_str()
               << std::endl;
 
     s4pkg::PackageVersion userVersion = package.m_package->getUserVersion();
     REQUIRE(userVersion.m_majorVersion == 0);
     REQUIRE(userVersion.m_minorVersion == 0);
-    std::cout << "Package user version: " << userVersion.toString()
+    std::cout << "Package user version: " << userVersion.toString().c_str()
               << std::endl;
 
-    s4pkg::PackageTime createdTime = package.m_package->getCreationTime();
-    REQUIRE(createdTime.toTimestamp() == 0LL);
-    std::cout << "Created date: " << createdTime.toString() << std::endl;
+    uint64_t createdTime = package.m_package->getCreationTime();
+    REQUIRE(createdTime == 0LL);
+    std::cout << "Created date: " << createdTime << std::endl;
 
-    s4pkg::PackageTime updatedTime = package.m_package->getModifiedTime();
-    REQUIRE(updatedTime.toTimestamp() == 0LL);
-    std::cout << "Updated date: " << updatedTime.toString() << std::endl;
+    uint64_t updatedTime = package.m_package->getModifiedTime();
+    REQUIRE(updatedTime == 0LL);
+    std::cout << "Updated date: " << updatedTime << std::endl;
 
     s4pkg::PackageHeader header = package.m_package->getPackageHeader();
     // REQUIRE(header.m_indexRecordEntryCount == 7);
     // REQUIRE(header.m_indexRecordPositionLow == 0);
     // REQUIRE(header.m_indexRecordSize == 228);
     // REQUIRE(header.m_indexRecordPosition == 204380);
-    std::cout << "Package header: " << header.toString() << std::endl;
+    std::cout << "Package header: " << header.toString().c_str() << std::endl;
 
     s4pkg::PackageFlags flags = package.m_package->getPackageFlags();
     REQUIRE_FALSE(flags.m_isConstantGroup);
     REQUIRE_FALSE(flags.m_isConstantType);
     REQUIRE_FALSE(flags.m_isConstantInstance);
-    std::cout << "Package flags: " << flags.toString() << std::endl;
+    std::cout << "Package flags: " << flags.toString().c_str() << std::endl;
 
     std::vector<s4pkg::IndexEntry> index = package.m_package->getPackageIndex();
 
@@ -168,12 +176,12 @@ TEST_CASE("Test good in-memory package", "package") {
     // REQUIRE(index[6].m_instance == 0x68699D89);
 
     for (const auto& entry : index) {
-        std::cout << "Entry: " << entry.toString() << std::endl;
+        std::cout << "Entry: " << entry.toString().c_str() << std::endl;
     }
 
     for (auto& resource : package.m_package->getResources()) {
-        std::cout << "Resource: " << resource->toString() << " ("
-                  << resource->getFriendlyName() << ")" << std::endl;
+        std::cout << "Resource: " << resource->toString().c_str() << " ("
+                  << resource->getFriendlyName().c_str() << ")" << std::endl;
     }
 
     /*std::shared_ptr<s4pkg::IResource> lastResource =
@@ -188,7 +196,7 @@ TEST_CASE("Test good in-memory package", "package") {
                   << resource->getFriendlyName() << ")" << std::endl;
     } */
 
-    std::cout << package.m_package->toString() << std::endl;
+    std::cout << package.m_package->toString().c_str() << std::endl;
 
     // std::ofstream outputStream("./output.package", std::ios_base::binary);
     // package.m_package->write(outputStream);
@@ -199,6 +207,6 @@ TEST_CASE("Test bad in-memory package", "package") {
     std::ifstream packageStream("./bad.package");
     s4pkg::PackageLoadResult package = s4pkg::loadPackage(packageStream);
 
-    INFO(package.m_errorMessage);
+    INFO(package.m_errorMessage.c_str());
     REQUIRE(package.m_package == nullptr);
 }

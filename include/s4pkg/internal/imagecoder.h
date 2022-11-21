@@ -22,6 +22,7 @@
 
 #include <s4pkg/internal/export.h>
 #include <s4pkg/internal/image.h>
+#include <s4pkg/lib/bytebuffer.h>
 
 #include <memory>
 
@@ -53,7 +54,7 @@ enum ImageFormat {
  * @param format: the format of the image to decode
  * @return an Image class if successful, nullptr on failure
  */
-S4PKG_EXPORT std::shared_ptr<Image> decode(const std::vector<uint8_t>& data,
+S4PKG_EXPORT std::shared_ptr<Image> decode(const lib::ByteBuffer& data,
                                            ImageFormat format);
 
 /**
@@ -62,7 +63,6 @@ S4PKG_EXPORT std::shared_ptr<Image> decode(const std::vector<uint8_t>& data,
  * @param format: the format to encode to
  * @return the encoded bytes (empty on failure)
  */
-S4PKG_EXPORT std::vector<uint8_t> encode(const Image& image,
-                                         ImageFormat format);
+S4PKG_EXPORT lib::ByteBuffer encode(const Image& image, ImageFormat format);
 
 };  // namespace s4pkg::internal::imagecoder

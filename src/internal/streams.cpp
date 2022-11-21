@@ -186,7 +186,7 @@ void readIndex(std::istream& stream,
                const flags_t& flags,
                uint32_t indexRecordCount,
                index_t& value) {
-    for (int i = 0; i < indexRecordCount; i++) {
+    for (uint32_t i = 0; i < indexRecordCount; i++) {
         index_entry_t indexEntry{};
 
         readIndexEntry(stream, flags, indexEntry);
@@ -213,10 +213,10 @@ void readRecord(std::istream& stream,
 
     stream.seekg(indexEntry.m_position);
     if (indexEntry.m_size > 0) {
-        std::vector<uint8_t> compressedBuffer(indexEntry.m_size);
+        lib::ByteBuffer compressedBuffer(indexEntry.m_size);
 
         uint8_t byte;
-        for (int i = 0; i < indexEntry.m_size; i++) {
+        for (uint32_t i = 0; i < indexEntry.m_size; i++) {
             readUint8(stream, byte);
             compressedBuffer[i] = byte;
         }
@@ -239,7 +239,7 @@ void readRecord(std::istream& stream,
             zInflateStream.avail_in = (unsigned int)indexEntry.m_size;
             zInflateStream.next_in = compressedBuffer.data();
 
-            std::vector<uint8_t> buffer(indexEntry.m_sizeDecompressed);
+            lib::ByteBuffer buffer(indexEntry.m_sizeDecompressed);
 
             zInflateStream.avail_out =
                 (unsigned int)indexEntry.m_sizeDecompressed;
@@ -462,9 +462,9 @@ void writeRecord(std::ostream& stream,
                  const raw_record_t& value) {
     index_entry_t& associatedEntry = packageIndex.m_entries[value.m_index];
 
-    associatedEntry.m_position = stream.tellp();
+    associatedEntry.m_position = (unsigned int)stream.tellp();
 
-    std::vector<uint8_t> buffer(value.m_data.size());
+    lib::ByteBuffer buffer(value.m_data.size());
     uint32_t actualSize = 0;
 
     if (value.m_data.size() > 0) {
@@ -488,7 +488,7 @@ void writeRecord(std::ostream& stream,
             zDeflateStream.avail_in = (unsigned int)value.m_data.size();
             zDeflateStream.next_in = value.m_data.data();
 
-            zDeflateStream.avail_out = buffer.size();
+            zDeflateStream.avail_out = (unsigned int)buffer.size();
             zDeflateStream.next_out = buffer.data();
 
             mz_deflateInit(&zDeflateStream, MZ_DEFAULT_COMPRESSION);
@@ -529,14 +529,14 @@ void writeRecord(std::ostream& stream,
             actualSize = zDeflateStream.total_out;
         } else {
             buffer = value.m_data;
-            actualSize = value.m_data.size();
+            actualSize = (uint32_t)value.m_data.size();
         }
     }
 
     writeBytes(stream, buffer.data(), actualSize);
 
     associatedEntry.m_size = actualSize;
-    associatedEntry.m_sizeDecompressed = buffer.size();
+    associatedEntry.m_sizeDecompressed = (uint32_t)buffer.size();
 }
 
 void writeRecords(std::ostream& stream,

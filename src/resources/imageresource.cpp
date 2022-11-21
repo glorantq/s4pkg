@@ -22,7 +22,7 @@
 
 namespace s4pkg::resources {
 
-std::vector<uint8_t> IImageResource::write() const {
+lib::ByteBuffer IImageResource::write() const {
     if (m_image) {
         return internal::imagecoder::encode(*this->m_image, this->m_format);
     } else {

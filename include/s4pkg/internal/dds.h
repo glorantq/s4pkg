@@ -26,6 +26,7 @@
 #include <vector>
 
 #include <s4pkg/internal/export.h>
+#include <s4pkg/lib/bytebuffer.h>
 
 #ifndef MAKE_FOURCC
 #define MAKE_FOURCC(ch0, ch1, ch2, ch3)                           \
@@ -128,8 +129,8 @@ dds_header_t readHeader(std::istream&);
 
 typedef struct dds_file_t {
     dds_header_t m_header;
-    std::vector<uint8_t> m_mainImage;
-    std::vector<std::vector<uint8_t>> m_mipmaps;
+    lib::ByteBuffer m_mainImage;
+    std::vector<lib::ByteBuffer> m_mipmaps;
 } dds_file_t;
 
 /**
@@ -138,7 +139,7 @@ typedef struct dds_file_t {
  */
 bool readFile(std::istream&, dds_file_t&);
 
-S4PKG_EXPORT std::vector<uint8_t> writeFile(const dds_file_t&);
+S4PKG_EXPORT lib::ByteBuffer writeFile(const dds_file_t&);
 
 std::string fileToString(const dds_file_t&);
 

@@ -33,7 +33,7 @@ class S4PKG_EXPORT RLEResource : public IImageResource {
                 uint32_t instanceEx,
                 uint32_t instance,
                 uint32_t group,
-                const std::vector<uint8_t>& data)
+                const lib::ByteBuffer& data)
         : IImageResource(instanceEx, instance, group, originalType) {
         // Provide a way to make an empty image
         if (data.size() < sizeof(internal::rle::rle_header_t)) {
@@ -62,11 +62,11 @@ class S4PKG_EXPORT RLEResource : public IImageResource {
 
     // IResource interface
    public:
-    std::string getFriendlyName() const override { return "RLE Image"; }
+    lib::String getFriendlyName() const override { return "RLE Image"; }
 
     // Object interface
    public:
-    const std::string toString() const override;
+    const lib::String toString() const override;
 };
 
 }  // namespace s4pkg::resources::ts4

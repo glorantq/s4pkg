@@ -24,5 +24,4 @@
 #include <s4pkg/package/flags.h>
 #include <s4pkg/package/header.h>
 #include <s4pkg/package/indexentry.h>
-#include <s4pkg/package/time.h>
 #include <s4pkg/package/version.h>

@@ -24,9 +24,9 @@
 
 namespace s4pkg::resources::ts4 {
 
-const std::string DSTResource::toString() const {
-    return fmt::format("DSTResource [ width={}, height={} ]",
-                       this->getWidth(), this->getHeight());
+const lib::String DSTResource::toString() const {
+    return fmt::format("DSTResource [ width={}, height={} ]", this->getWidth(),
+                       this->getHeight());
 }
 
 }  // namespace s4pkg::resources::ts4

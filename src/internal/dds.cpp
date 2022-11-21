@@ -188,7 +188,7 @@ void readCompressedImageData(std::istream& stream, dds_file_t& file) {
     // Read in the main image
     try {
         file.m_mainImage =
-            std::vector<uint8_t>(DDS_IMAGE_SIZE(width, height, blockSize));
+            lib::ByteBuffer(DDS_IMAGE_SIZE(width, height, blockSize));
         streams::readBytes(stream, file.m_mainImage.data(),
                            (int)file.m_mainImage.size());
     } catch (PackageException e) {
@@ -201,7 +201,7 @@ void readCompressedImageData(std::istream& stream, dds_file_t& file) {
     }
 
     // Then make room for the mipmaps
-    file.m_mipmaps = std::vector<std::vector<uint8_t>>(
+    file.m_mipmaps = std::vector<lib::ByteBuffer>(
         std::max<int32_t>(0, file.m_header.m_mipMapCount - 1));
 
     // And read them in (if there are any)
@@ -212,7 +212,7 @@ void readCompressedImageData(std::istream& stream, dds_file_t& file) {
         width = std::max<uint32_t>(1, width);
         height = std::max<uint32_t>(1, height);
 
-        std::vector<uint8_t> mipmap(DDS_IMAGE_SIZE(width, height, blockSize));
+        lib::ByteBuffer mipmap(DDS_IMAGE_SIZE(width, height, blockSize));
         streams::readBytes(stream, mipmap.data(), (int)mipmap.size());
 
         file.m_mipmaps[i] = mipmap;
@@ -227,7 +227,7 @@ void readUncompressedImageData(std::istream& stream, dds_file_t& file) {
 
     // Read in the main image
     try {
-        file.m_mainImage = std::vector<uint8_t>(width * height * bytesPerPixel);
+        file.m_mainImage = lib::ByteBuffer(width * height * bytesPerPixel);
         streams::readBytes(stream, file.m_mainImage.data(),
                            (int)file.m_mainImage.size());
     } catch (PackageException e) {
@@ -240,7 +240,7 @@ void readUncompressedImageData(std::istream& stream, dds_file_t& file) {
     }
 
     // Then make room for the mipmaps
-    file.m_mipmaps = std::vector<std::vector<uint8_t>>(
+    file.m_mipmaps = std::vector<lib::ByteBuffer>(
         std::max<int32_t>(0, file.m_header.m_mipMapCount - 1));
 
     // And read them in (if there are any)
@@ -251,7 +251,7 @@ void readUncompressedImageData(std::istream& stream, dds_file_t& file) {
         width = std::max<uint32_t>(1, width);
         height = std::max<uint32_t>(1, height);
 
-        std::vector<uint8_t> mipmap(width * height * bytesPerPixel);
+        lib::ByteBuffer mipmap(width * height * bytesPerPixel);
         streams::readBytes(stream, mipmap.data(), (int)mipmap.size());
 
         file.m_mipmaps[i] = mipmap;
@@ -302,7 +302,7 @@ bool readFile(std::istream& stream, dds_file_t& file) {
 }
 
 // We're going for functionality over looks here
-std::vector<uint8_t> writeFile(const dds_file_t& file) {
+lib::ByteBuffer writeFile(const dds_file_t& file) {
     uint8_t magicBytes[] = {'D', 'D', 'S', ' '};
 
     uint32_t imageDataSize = (uint32_t)file.m_mainImage.size();
@@ -313,7 +313,7 @@ std::vector<uint8_t> writeFile(const dds_file_t& file) {
     uint32_t totalFileSize =
         sizeof(magicBytes) + sizeof(dds_header_t) + imageDataSize;
 
-    std::vector<uint8_t> output(totalFileSize);
+    lib::ByteBuffer output(totalFileSize);
 
     uint32_t c = 0;
     COPY_BYTES(magicBytes, output, 0, 4, c);

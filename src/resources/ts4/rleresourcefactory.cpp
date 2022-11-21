@@ -28,7 +28,7 @@ std::shared_ptr<s4pkg::IResource> RLEResourceFactory::create(
     uint32_t instanceEx,
     uint32_t instance,
     uint32_t group,
-    const std::vector<uint8_t>& data) const {
+    const lib::ByteBuffer& data) const {
     if (type == ResourceType::RLE2_IMAGE || type == ResourceType::RLES_IMAGE) {
         return std::make_shared<resources::ts4::RLEResource>(
             (s4pkg::ResourceType)type, instanceEx, instance, group, data);
@@ -37,7 +37,7 @@ std::shared_ptr<s4pkg::IResource> RLEResourceFactory::create(
     return nullptr;
 }
 
-const std::string RLEResourceFactory::toString() const {
+const lib::String RLEResourceFactory::toString() const {
     return "RLEResourceFactory []";
 }
 

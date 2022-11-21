@@ -24,7 +24,7 @@
 
 namespace s4pkg::resources::ts4 {
 
-const std::string ThumbnailResource::toString() const {
+const lib::String ThumbnailResource::toString() const {
     return fmt::format("ThumbnailResource [ width={}, height={} ]",
                        this->getWidth(), this->getHeight());
 }

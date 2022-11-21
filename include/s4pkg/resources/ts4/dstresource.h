@@ -37,7 +37,7 @@ class S4PKG_EXPORT DSTResource : public IImageResource {
                 uint32_t instanceEx,
                 uint32_t instance,
                 uint32_t group,
-                const std::vector<uint8_t>& data)
+                const lib::ByteBuffer& data)
         : IImageResource(instanceEx, instance, group, originalType) {
         // Provide a way to make an empty image
         if (data.size() < sizeof(internal::dds::dds_header_t)) {
@@ -88,11 +88,11 @@ class S4PKG_EXPORT DSTResource : public IImageResource {
 
     // IResource interface
    public:
-    std::string getFriendlyName() const override { return "DST/DXT Image"; }
+    lib::String getFriendlyName() const override { return "DST/DXT Image"; }
 
     // Object interface
    public:
-    const std::string toString() const override;
+    const lib::String toString() const override;
 };
 
 }  // namespace s4pkg::resources::ts4
